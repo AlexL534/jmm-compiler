@@ -4,55 +4,72 @@ grammar Javamm;
     package pt.up.fe.comp2025;
 }
 
-CLASS : 'class' ;
-INT : 'int' ;
-PUBLIC : 'public' ;
-RETURN : 'return' ;
+program
+    : importDeclaration* classDeclaration EOF
+    ;
 
-INTEGER : [0-9] ;
-ID : [a-zA-Z]+ ;
+INT : [0-9]+ ;
+ID : [a-zA-Z_$][a-zA-Z_0-9$]* ;
 
 WS : [ \t\n\r\f]+ -> skip ;
 
-program
-    : classDecl EOF
+COMMENT
+    : '/*' .*? '*/' -> channel(HIDDEN)
+    ;
+
+LINE_COMMENT
+    : '//' ~[\r\n]* -> channel(HIDDEN)
     ;
 
 
-classDecl
-    : CLASS name=ID
-        '{'
-        methodDecl*
-        '}'
+importDeclaration
+    : 'import' ID ('.' ID)* ';'
     ;
 
-varDecl
-    : type name=ID ';'
+classDeclaration
+    : 'class' ID ('extends' ID)? '{' varDeclaration* methodDeclaration* '}'
+    ;
+
+varDeclaration
+    : type ID ';'
+    ;
+
+methodDeclaration
+    : 'public'? type ID '(' (type ID (',' type ID)*)? ')' '{' varDeclaration* statement* 'return' expression ';' '}'
+    | 'public'? 'static' 'void' 'main' '(' 'String' '[' ']' ID ')' '{' varDeclaration* statement* '}'
     ;
 
 type
-    : name= INT ;
-
-methodDecl locals[boolean isPublic=false]
-    : (PUBLIC {$isPublic=true;})?
-        type name=ID
-        '(' param ')'
-        '{' varDecl* stmt* '}'
+    : 'int' '[' ']'
+    | 'int' '...'
+    | 'boolean'
+    | 'int'
+    | ID
     ;
 
-param
-    : type name=ID
+statement
+    : '{' statement* '}'
+    | 'if' '(' expression ')' statement 'else' statement
+    | 'while' '(' expression ')' statement
+    | expression ';'
+    | ID '=' expression ';'
+    | ID '[' expression ']' '=' expression ';'
     ;
 
-stmt
-    : expr '=' expr ';' #AssignStmt //
-    | RETURN expr ';' #ReturnStmt
-    ;
-
-expr
-    : expr op= '*' expr #BinaryExpr //
-    | expr op= '+' expr #BinaryExpr //
-    | value=INTEGER #IntegerLiteral //
-    | name=ID #VarRefExpr //
+expression
+    : expression ('&&' | '<' | '+' | '-' | '*' | '/') expression
+    | expression '[' expression ']'
+    | expression '.' 'length'
+    | expression '.' ID '(' (expression (',' expression)*)? ')'
+    | 'new' 'int' '[' expression ']'
+    | 'new' ID '(' ')'
+    | '!' expression
+    | '(' expression ')'
+    | '[' (expression (',' expression)*)? ']'
+    | INT
+    | 'true'
+    | 'false'
+    | ID
+    | 'this'
     ;
 
