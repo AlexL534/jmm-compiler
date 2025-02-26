@@ -62,6 +62,12 @@ public class GrammarTest {
     }
 
     @Test
+    public void testInstanceMethod() {
+        TestUtils.parseVerbose("int foo(String aString) {return a;}",
+                INSTANCE_METHOD);
+    }
+
+    @Test
     public void testInstanceMethodVarargs() {
         TestUtils.parseVerbose("int foo(int... ints) {return 0;}",
                 INSTANCE_METHOD);
