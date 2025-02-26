@@ -70,7 +70,9 @@ RETURN : 'return' ;
 BOOLEAN: 'boolean';
 STRING: 'String';
 
-INTEGER : [0-9] ;
+DIGIT : [0-9] ;
+DECIMAL : [1-9] DIGIT*;
+
 ID : [a-zA-Z_$][a-zA-Z_0-9$]* ;
 
 WS : [ \t\n\r\f]+ -> skip ;
@@ -124,7 +126,7 @@ stmt
 
 expr
     : expr ('&&' | '<' | '+' | '-' | '*' | '/') expr
-    | expr '[' expr ']'
+    | expr '[' expr ']' (expr)?
     | expr '.' 'length'
     | expr '.' ID '(' (expr (',' expr)*)? ')'
     | 'new' INT '[' expr ']'
@@ -132,7 +134,7 @@ expr
     | '!' expr
     | '(' expr ')'
     | '[' (expr (',' expr)*)? ']'
-    | INTEGER
+    | (DECIMAL | DIGIT)
     | 'true'
     | 'false'
     | ID
