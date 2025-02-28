@@ -70,8 +70,7 @@ RETURN : 'return' ;
 BOOLEAN: 'boolean';
 STRING: 'String';
 
-DIGIT : [0-9] ;
-DECIMAL : [1-9] DIGIT*;
+INTEGER : [0] | ([1-9][0-9]*);
 
 ID : [a-zA-Z_$][a-zA-Z_0-9$]* ;
 
@@ -102,8 +101,8 @@ varDecl
     ;
 
 methodDecl
-    : PUBLIC ? type ID '(' (type ID (',' type ID)*)? ')' '{' varDecl* stmt* RETURN expr ';' '}'
-    | PUBLIC ? 'static' 'void' 'main' '(' STRING '[' ']' ID ')' '{' varDecl* stmt* '}'
+    : (PUBLIC) ? type ID '(' (type ID (',' type ID)*)? ')' '{' varDecl* stmt* RETURN expr ';' '}'
+    | (PUBLIC) ? 'static' 'void' 'main' '(' STRING '[' ']' ID ')' '{' varDecl* stmt* '}'
     ;
 
 type
@@ -125,20 +124,27 @@ stmt
     ;
 
 expr
-    : expr ('&&' | '<' | '+' | '-' | '*' | '/') expr
+    : '(' expr ')' //Parentheses
+    | expr '.' 'length' //Array Length
+    | 'new' INT '[' expr ']' //Array Creation
+    | 'new' ID '(' ')' //Object Creation
+    | expr '.' ID '(' (expr (',' expr)*)? ')' //Method Call
+    | '!' expr //Logical NOT
+    | expr ('++' | '--') // Post-increment / Post-decrement
+    | expr ('*' | '/' | '%') expr // Multiplicative
+    | expr ('+' | '-') expr // Additive
+    | expr ('<' | '<=' | '>' | '>=') expr // Relational
+    | expr ('==' | '!=') expr // Equality
+    | expr ('&&') expr // Logical AND
+    | expr ('||') expr // Logical OR
+    | expr ('=' | '+=' | '-=' | '*=' | '/=' | '%=') expr //Assignment
     | expr '[' expr ']' (expr)?
-    | expr '.' 'length'
-    | expr '.' ID '(' (expr (',' expr)*)? ')'
-    | 'new' INT '[' expr ']'
-    | 'new' ID '(' ')'
-    | '!' expr
-    | '(' expr ')'
-    | '[' (expr (',' expr)*)? ']'
-    | (DECIMAL | DIGIT)
+    | '[' (expr (',' expr)*)? ']' // Array Literal
+    | 'this'
+    | INTEGER
     | 'true'
     | 'false'
     | ID
-    | 'this'
     ;
 
 
