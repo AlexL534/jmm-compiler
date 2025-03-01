@@ -77,23 +77,23 @@ ID : [a-zA-Z_$][a-zA-Z_0-9$]* ;
 WS : [ \t\n\r\f]+ -> skip ;
 
 COMMENT
-    : '/*' .*? '*/' -> channel(HIDDEN)
-    ;
+        : '/*' .*? '*/' -> channel(HIDDEN)
+        ;
 
-LINE_COMMENT
-    : '//' ~[\r\n]* -> channel(HIDDEN)
-    ;
+    LINE_COMMENT
+        : '//' ~[\r\n]* -> channel(HIDDEN)
+        ;
 
 program
     : importDecl* classDecl EOF
     ;
 
 importDecl
-    : 'import' ID ('.' ID)* ';'
+    : 'import' ID ('.' ID)* ';' #ImportStmt
     ;
 
 classDecl
-    : CLASS ID ('extends' ID)? '{' varDecl* methodDecl* '}'
+    : CLASS ID ('extends' ID)? '{' varDecl* methodDecl* '}' #ClassDef
     ;
 
 varDecl
@@ -106,45 +106,46 @@ methodDecl
     ;
 
 type
-    : INT '[' ']'
-    | INT '...'
-    | BOOLEAN
-    | STRING
-    | INT
-    | ID
+    : INT '[' ']' #ArrayType
+    | INT '...' #VarArgType
+    | BOOLEAN #BooleanType
+    | STRING #StringType
+    | INT #IntType
+    | ID #IdType
     ;
 
 stmt
-    : '{' stmt* '}'
-    | 'if' '(' expr ')' stmt 'else' stmt
-    | 'while' '(' expr ')' stmt
-    | expr ';'
-    | ID '=' expr ';'
-    | ID '[' expr ']' '=' expr ';'
+    : '{' stmt* '}' #BlockStmt
+    | 'if' '(' expr ')' stmt 'else' stmt #IfStmt
+    | 'while' '(' expr ')' stmt #WhileStmt
+    | expr ';' #ExprStmt
+    | ID '=' expr ';' #AssignStmt
+    | ID '[' expr ']' '=' expr ';' #ArrayAssignStmt
     ;
 
 expr
-    : '(' expr ')' //Parentheses
-    | expr '.' 'length' //Array Length
-    | 'new' INT '[' expr ']' //Array Creation
-    | 'new' ID '(' ')' //Object Creation
-    | expr '.' ID '(' (expr (',' expr)*)? ')' //Method Call
-    | '!' expr //Logical NOT
-    | expr ('++' | '--') // Post-increment / Post-decrement
-    | expr ('*' | '/' | '%') expr // Multiplicative
-    | expr ('+' | '-') expr // Additive
-    | expr ('<' | '<=' | '>' | '>=') expr // Relational
-    | expr ('==' | '!=') expr // Equality
-    | expr ('&&') expr // Logical AND
-    | expr ('||') expr // Logical OR
-    | expr ('=' | '+=' | '-=' | '*=' | '/=' | '%=') expr //Assignment
-    | expr '[' expr ']' (expr)?
-    | '[' (expr (',' expr)*)? ']' // Array Literal
-    | 'this'
-    | INTEGER
-    | 'true'
-    | 'false'
-    | ID
+    : '(' expr ')' #Parentheses
+    | expr '.' 'length' #ArrayLength
+    | 'new' INT '[' expr ']' #ArrayCreation
+    | 'new' ID '(' ')' #ObjectCreation
+    | expr '.' ID '(' (expr (',' expr)*)? ')' #MethodCall
+    | expr '.' ID #FieldAccess
+    | '!' expr #UnaryOp
+    | expr ('++' | '--') #UnaryOp
+    | expr ('*' | '/' | '%') expr #BinaryOp
+    | expr ('+' | '-') expr #BinaryOp
+    | expr ('<' | '<=' | '>' | '>=') expr #BinaryOp
+    | expr ('==' | '!=') expr #BinaryOp
+    | expr ('&&') expr #BinaryOp
+    | expr ('||') expr #BinaryOp
+    | expr ('=' | '+=' | '-=' | '*=' | '/=' | '%=') expr #BinaryOp
+    | expr '[' expr ']' (expr)? #ArraySubscript
+    | '[' (expr (',' expr)*)? ']' #ArrayLiteral
+    | 'this' #ThisExpr
+    | INTEGER #IntegerLiteral
+    | 'true' #BooleanLiteral
+    | 'false' #BooleanLiteral
+    | ID #VarRefExpr
     ;
 
 
