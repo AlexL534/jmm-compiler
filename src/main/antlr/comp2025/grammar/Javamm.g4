@@ -89,11 +89,11 @@ program
     ;
 
 importDecl
-    : 'import' ID ('.' ID)* ';' #ImportStmt
+    : 'import' value+=ID ('.' value+=ID)* ';' #ImportStmt
     ;
 
 classDecl
-    : CLASS name=ID ('extends' ID)? '{' varDecl* methodDecl* '}' #ClassDef
+    : CLASS name=ID ('extends' superClass=ID)? '{' varDecl* methodDecl* '}' #ClassDef
     ;
 
 varDecl
@@ -106,12 +106,12 @@ methodDecl
     ;
 
 type
-    : INT '[' ']' #ArrayType
-    | INT '...' #VarArgType
-    | BOOLEAN #BooleanType
-    | STRING #StringType
-    | INT #IntType
-    | ID #IdType
+    : value = INT '[' ']' #ArrayType
+    | value = INT '...' #VarArgType
+    | value = BOOLEAN #BooleanType
+    | value = STRING #StringType
+    | value = INT #IntType
+    | value = ID #IdType
     ;
 
 stmt

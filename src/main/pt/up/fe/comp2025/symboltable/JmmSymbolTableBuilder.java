@@ -39,15 +39,49 @@ public class JmmSymbolTableBuilder {
         reports = new ArrayList<>();
 
         // TODO: After your grammar supports more things inside the program (e.g., imports) you will have to change this
-        var classDecl = root.getChild(0);
+        var imports = buildImports(root);
+        System.out.println(imports);
+        var classDeclarations = root.getChildren(CLASS_DECL);
+        if(classDeclarations.isEmpty()){
+            reports.add(newError(root, "Class declaration not found"));
+            throw new RuntimeException("Class declaration not found");
+        }
+        var classDecl = classDeclarations.get(0);
+        var superClass = classDecl.get("superClass");
+        if(superClass != null) System.out.println(superClass);
         SpecsCheck.checkArgument(Kind.CLASS_DECL.check(classDecl), () -> "Expected a class declaration: " + classDecl);
         String className = classDecl.get("name");
+        var fields = buildFields(classDecl);
+        System.out.println(fields);
         var methods = buildMethods(classDecl);
         var returnTypes = buildReturnTypes(classDecl);
         var params = buildParams(classDecl);
         var locals = buildLocals(classDecl);
 
         return new JmmSymbolTable(className, methods, returnTypes, params, locals);
+    }
+
+    private List<String> buildImports(JmmNode root) {
+        List<String> list = new ArrayList<>();
+
+        for(var child : root.getChildren(IMPORT_DECL)) {
+            var valuesStr = child.get("value").substring(1, child.get("value").length() - 1);
+            var finalValue = String.join(".", valuesStr.split(","));
+            list.add(finalValue);
+        }
+        return list;
+    }
+
+    private List<Symbol> buildFields(JmmNode classDecl) {
+        List <Symbol> fields = new ArrayList<>();
+        for(var field : classDecl.getChildren(VAR_DECL)){
+            var name = field.get("name");
+            var type = TypeUtils.convertType(field.getChild(0));
+            var symbol = new Symbol(type,name);
+            fields.add(symbol);
+        }
+
+        return fields;
     }
 
 
