@@ -6,10 +6,12 @@ import pt.up.fe.comp.jmm.ast.antlr.AntlrParser;
 import pt.up.fe.comp.jmm.parser.JmmParser;
 import pt.up.fe.comp.jmm.parser.JmmParserResult;
 import pt.up.fe.comp.jmm.report.Report;
+import pt.up.fe.comp.jmm.report.ReportType;
 import pt.up.fe.comp.jmm.report.Stage;
 import pt.up.fe.comp2025.JavammLexer;
 import pt.up.fe.comp2025.JavammParser;
 
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -49,11 +51,7 @@ public class JmmParserImpl implements JmmParser {
             // Convert ANTLR CST to JmmNode AST
             var r = AntlrParser.parse(lex, parser, startingRule, config);
 
-            //if (r.getRootNode() != null) {
-            //    System.out.println("AST:\n" + r.getRootNode().toTree());
-            //}
-
-            return r;
+            return new JmmParserResult(r.getRootNode(), r.getReports(), config);
 
         } catch (Exception e) {
             // There was an uncaught exception during parsing, create an error JmmParserResult without root node
