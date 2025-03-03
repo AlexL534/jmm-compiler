@@ -1,0 +1,8 @@
+ import io;
+ class Factorial {
+     public static void main(String[] args){
+         a = 1;
+         b = 2;
+         c = a+b*3;
+     }
+ }

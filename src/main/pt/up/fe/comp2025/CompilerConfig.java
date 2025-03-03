@@ -72,6 +72,7 @@ public class CompilerConfig {
                 throw new RuntimeException("Arguments should start with '-'");
             }
 
+            System.out.println(arg);
             String shortOption = arg.substring(1, 2);
             if (!isShortOpt(shortOption)) {
                 throw new RuntimeException("Unrecognized option '-" + shortOption + "'");

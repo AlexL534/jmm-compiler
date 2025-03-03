@@ -93,16 +93,16 @@ importDecl
     ;
 
 classDecl
-    : CLASS ID ('extends' ID)? '{' varDecl* methodDecl* '}' #ClassDef
+    : CLASS name=ID ('extends' ID)? '{' varDecl* methodDecl* '}' #ClassDef
     ;
 
 varDecl
-    : type ID ';'
+    : type name=ID ';'
     ;
 
 methodDecl
-    : (PUBLIC) ? type ID '(' (type ID (',' type ID)*)? ')' '{' varDecl* stmt* RETURN expr ';' '}'
-    | (PUBLIC) ? 'static' 'void' 'main' '(' STRING '[' ']' ID ')' '{' varDecl* stmt* '}'
+    : (PUBLIC) ? type name=ID '(' (type ID (',' type ID)*)? ')' '{' varDecl* stmt* RETURN expr ';' '}'
+    | (PUBLIC) ? 'static' 'void' name='main' '(' STRING '[' ']' ID ')' '{' varDecl* stmt* '}'
     ;
 
 type
@@ -127,25 +127,25 @@ expr
     : '(' expr ')' #Parentheses
     | expr '.' 'length' #ArrayLength
     | 'new' INT '[' expr ']' #ArrayCreation
-    | 'new' ID '(' ')' #ObjectCreation
-    | expr '.' ID '(' (expr (',' expr)*)? ')' #MethodCall
-    | expr '.' ID #FieldAccess
-    | '!' expr #UnaryOp
-    | expr ('++' | '--') #UnaryOp
-    | expr ('*' | '/' | '%') expr #BinaryOp
-    | expr ('+' | '-') expr #BinaryOp
-    | expr ('<' | '<=' | '>' | '>=') expr #BinaryOp
-    | expr ('==' | '!=') expr #BinaryOp
-    | expr ('&&') expr #BinaryOp
-    | expr ('||') expr #BinaryOp
-    | expr ('=' | '+=' | '-=' | '*=' | '/=' | '%=') expr #BinaryOp
+    | 'new' name=ID '(' ')' #ObjectCreation
+    | expr '.' name=ID '(' (expr (',' expr)*)? ')' #MethodCall
+    | expr '.' name=ID #FieldAccess
+    | op='!' expr #UnaryOp
+    | expr op=('++' | '--') #UnaryOp
+    | expr op=('*' | '/' | '%') expr #BinaryOp
+    | expr op=('+' | '-') expr #BinaryOp
+    | expr op=('<' | '<=' | '>' | '>=') expr #BinaryOp
+    | expr op = ('==' | '!=') expr #BinaryOp
+    | expr op = '&&' expr #BinaryOp
+    | expr op='||' expr #BinaryOp
+    | expr op=('=' | '+=' | '-=' | '*=' | '/=' | '%=') expr #BinaryOp
     | expr '[' expr ']' (expr)? #ArraySubscript
     | '[' (expr (',' expr)*)? ']' #ArrayLiteral
     | 'this' #ThisExpr
-    | INTEGER #IntegerLiteral
-    | 'true' #BooleanLiteral
-    | 'false' #BooleanLiteral
-    | ID #VarRefExpr
+    | value=INTEGER #IntegerLiteral
+    | value='true' #BooleanLiteral
+    | value='false' #BooleanLiteral
+    | name=ID #VarRefExpr
     ;
 
 
