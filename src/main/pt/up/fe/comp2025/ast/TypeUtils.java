@@ -25,6 +25,8 @@ public class TypeUtils {
 
     public static Type newBooleanType() {return new Type("boolean", false);}
 
+    public static Type newVoidType() {return new Type("void", false);}
+
     public static Type convertType(JmmNode typeNode) {
 
         // TODO: When you support new types, this must be updated

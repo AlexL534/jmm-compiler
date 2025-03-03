@@ -100,8 +100,16 @@ varDecl
     : type name=ID ';'
     ;
 
+param
+    : type name=ID
+    ;
+
+returnType
+    : type
+    ;
+
 methodDecl
-    : (PUBLIC) ? type name=ID '(' (type ID (',' type ID)*)? ')' '{' varDecl* stmt* RETURN expr ';' '}'
+    : (PUBLIC) ? returnType name=ID '(' (param (',' param)*)? ')' '{' varDecl* stmt* RETURN expr ';' '}'
     | (PUBLIC) ? 'static' 'void' name='main' '(' STRING '[' ']' ID ')' '{' varDecl* stmt* '}'
     ;
 

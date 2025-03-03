@@ -40,25 +40,26 @@ public class JmmSymbolTableBuilder {
 
         // TODO: After your grammar supports more things inside the program (e.g., imports) you will have to change this
         var imports = buildImports(root);
-        System.out.println(imports);
         var classDeclarations = root.getChildren(CLASS_DECL);
         if(classDeclarations.isEmpty()){
             reports.add(newError(root, "Class declaration not found"));
             throw new RuntimeException("Class declaration not found");
         }
         var classDecl = classDeclarations.get(0);
-        var superClass = classDecl.get("superClass");
-        if(superClass != null) System.out.println(superClass);
+        var superClass = "";
+        if(classDecl.hasAttribute("superClass")){
+            superClass = classDecl.get("superClass");
+        }
+
         SpecsCheck.checkArgument(Kind.CLASS_DECL.check(classDecl), () -> "Expected a class declaration: " + classDecl);
         String className = classDecl.get("name");
         var fields = buildFields(classDecl);
-        System.out.println(fields);
         var methods = buildMethods(classDecl);
         var returnTypes = buildReturnTypes(classDecl);
         var params = buildParams(classDecl);
         var locals = buildLocals(classDecl);
 
-        return new JmmSymbolTable(className, methods, returnTypes, params, locals);
+        return new JmmSymbolTable(imports, className,superClass,fields, methods, returnTypes, params, locals);
     }
 
     private List<String> buildImports(JmmNode root) {
@@ -90,8 +91,14 @@ public class JmmSymbolTableBuilder {
 
         for (var method : classDecl.getChildren(METHOD_DECL)) {
             var name = method.get("name");
-            // TODO: After you add more types besides 'int', you will have to update this
-            var returnType = TypeUtils.newIntType();
+            var typeDecl = method.getChildren(RETURN_TYPE);
+
+            if(typeDecl.isEmpty()){
+                map.put(name, TypeUtils.newVoidType());
+                continue;
+            }
+
+            var returnType = TypeUtils.convertType(typeDecl.getFirst().getChild(0));
             map.put(name, returnType);
         }
 
@@ -105,8 +112,7 @@ public class JmmSymbolTableBuilder {
         for (var method : classDecl.getChildren(METHOD_DECL)) {
             var name = method.get("name");
             var params = method.getChildren(PARAM).stream()
-                    // TODO: When you support new types, this code has to be updated
-                    .map(param -> new Symbol(TypeUtils.newIntType(), param.get("name")))
+                    .map(param -> new Symbol(TypeUtils.convertType(param.getChild(0)), param.get("name")))
                     .toList();
 
             map.put(name, params);
@@ -122,8 +128,7 @@ public class JmmSymbolTableBuilder {
         for (var method : classDecl.getChildren(METHOD_DECL)) {
             var name = method.get("name");
             var locals = method.getChildren(VAR_DECL).stream()
-                    // TODO: When you support new types, this code has to be updated
-                    .map(varDecl -> new Symbol(TypeUtils.newIntType(), varDecl.get("name")))
+                    .map(varDecl -> new Symbol(TypeUtils.convertType(varDecl.getChild(0)), varDecl.get("name")))
                     .toList();
 
 
