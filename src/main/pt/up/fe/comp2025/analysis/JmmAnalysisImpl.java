@@ -31,8 +31,9 @@ public class JmmAnalysisImpl implements JmmAnalysis {
     private List<AnalysisVisitor> buildPasses(SymbolTable table) {
 
         var undeclaredVariableCheck = new UndeclaredVariable();
+        var invalidOperationCheck = new InvalidOperationCheck();
 
-        return List.of(undeclaredVariableCheck);
+        return List.of(undeclaredVariableCheck, invalidOperationCheck);
     }
 
     @Override
