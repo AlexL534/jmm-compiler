@@ -22,8 +22,11 @@ public class SemanticAnalysisTest {
     @Test
     public void classNotImported() {
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ClassNotImported.jmm"));
+
+        // Debugging output to verify reports are being generated
+        System.out.println("Reports: " + result.getReports());
+
         TestUtils.mustFail(result);
-        System.out.println(result.getReports());
     }
 
     @Test
@@ -35,6 +38,11 @@ public class SemanticAnalysisTest {
     @Test
     public void boolTimesInt() {
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/BoolTimesInt.jmm"));
+
+        // Debugging output to verify reports are being generated
+        System.out.println("Reports: " + result.getReports());
+
+
         TestUtils.mustFail(result);
     }
 
