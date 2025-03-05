@@ -1,62 +1,3 @@
-/*grammar Javamm;
-
-@header {
-    package pt.up.fe.comp2025;
-}
-
-CLASS : 'class' ;
-INT : INT ;
-PUBLIC : PUBLIC ;
-RETURN : 'return' ;
-
-INTEGER : [0-9] ;
-ID : [a-zA-Z]+ ;
-
-WS : [ \t\n\r\f]+ -> skip ;
-
-program
-    : classDecl EOF
-    ;
-
-
-classDecl
-    : CLASS name=ID
-        '{'
-        methodDecl*
-        '}'
-    ;
-
-varDecl
-    : type name=ID ';'
-    ;
-
-type
-    : name= INT ;
-
-methodDecl locals[boolean isPublic=false]
-    : (PUBLIC {$isPublic=true;})?
-        type name=ID
-        '(' param ')'
-        '{' varDecl* stmt* '}'
-    ;
-
-param
-    : type name=ID
-    ;
-
-stmt
-    : expr '=' expr ';' #AssignStmt //
-    | RETURN expr ';' #ReturnStmt
-    ;
-
-expr
-    : expr op= '*' expr #BinaryExpr //
-    | expr op= '+' expr #BinaryExpr //
-    | value=INTEGER #IntegerLiteral //
-    | name=ID #VarRefExpr //
-    ;
-*/
-
 grammar Javamm;
 
 @header {
@@ -80,7 +21,7 @@ COMMENT
         : '/*' .*? '*/' -> channel(HIDDEN)
         ;
 
-    LINE_COMMENT
+LINE_COMMENT
         : '//' ~[\r\n]* -> channel(HIDDEN)
         ;
 
@@ -140,13 +81,13 @@ expr
     | expr '.' name=ID #FieldAccess
     | op='!' expr #UnaryOp
     | expr op=('++' | '--') #UnaryOp
-    | expr op=('*' | '/' | '%') expr #BinaryOp
-    | expr op=('+' | '-') expr #BinaryOp
-    | expr op=('<' | '<=' | '>' | '>=') expr #BinaryOp
-    | expr op = ('==' | '!=') expr #BinaryOp
-    | expr op = '&&' expr #BinaryOp
-    | expr op='||' expr #BinaryOp
-    | expr op=('=' | '+=' | '-=' | '*=' | '/=' | '%=') expr #BinaryOp
+    | expr op=('*' | '/' | '%') expr #BinaryExpr
+    | expr op=('+' | '-') expr #BinaryExpr
+    | expr op=('<' | '<=' | '>' | '>=') expr #BinaryExpr
+    | expr op = ('==' | '!=') expr #BinaryExpr
+    | expr op = '&&' expr #BinaryExpr
+    | expr op='||' expr #BinaryExpr
+    | expr op=('=' | '+=' | '-=' | '*=' | '/=' | '%=') expr #BinaryExpr
     | expr '[' expr ']' (expr)? #ArraySubscript
     | '[' (expr (',' expr)*)? ']' #ArrayLiteral
     | 'this' #ThisExpr

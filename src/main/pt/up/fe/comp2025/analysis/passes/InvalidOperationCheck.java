@@ -8,83 +8,130 @@ import pt.up.fe.comp2025.analysis.AnalysisVisitor;
 import pt.up.fe.comp2025.ast.Kind;
 import pt.up.fe.specs.util.SpecsCheck;
 
-public class InvalidOperationCheck extends AnalysisVisitor {
+import static pt.up.fe.comp2025.ast.Kind.*;
 
-    private String currentMethod;
+public class InvalidOperationCheck extends AnalysisVisitor {
 
     @Override
     public void buildVisitor() {
-        addVisit(Kind.METHOD_DECL, this::visitMethodDecl);
-        addVisit(Kind.BINARY_EXPR, this::visitBinaryOp);
-    }
-
-    private Void visitMethodDecl(JmmNode method, SymbolTable table) {
-        currentMethod = method.get("name");
-        return null;
+        // Use the enum constant directly
+        addVisit(BINARY_EXPR, this::visitBinaryOp);
     }
 
     private boolean isOperationValid(String op, String leftType, String rightType) {
+        // Display the check being performed
+        System.out.println("Checking operation: '" + op + "' between types '" + leftType + "' and '" + rightType + "'");
+        
         // Arithmetic operations: +, -, *, /, %
-        if ((op.equals("+") || op.equals("-") || op.equals("*") || op.equals("/") || op.equals("%")) &&
-                (leftType.equals("int") && rightType.equals("int"))) {
-            return true;
+        if (op.equals("+") || op.equals("-") || op.equals("*") || op.equals("/") || op.equals("%")) {
+            return leftType.equals("int") && rightType.equals("int");
         }
 
         // Logical operations: &&, ||
-        if ((op.equals("&&") || op.equals("||")) &&
-                (leftType.equals("boolean") && rightType.equals("boolean"))) {
-            return true;
+        if (op.equals("&&") || op.equals("||")) {
+            return leftType.equals("boolean") && rightType.equals("boolean");
         }
 
         // Comparison operations: <, >, <=, >= (only valid for int types)
-        if ((op.equals("<") || op.equals(">") || op.equals("<=") || op.equals(">=")) &&
-                (leftType.equals("int") && rightType.equals("int"))) {
-            return true;
+        if (op.equals("<") || op.equals(">") || op.equals("<=") || op.equals(">=")) {
+            return leftType.equals("int") && rightType.equals("int");
         }
 
         // Equality operations: ==, !=
         if (op.equals("==") || op.equals("!=")) {
-            // Allow comparisons between identical types
+            // Same types can be compared
             if (leftType.equals(rightType)) {
                 return true;
-            }
-            // Allow integer type promotion (int == float)
-            if ((leftType.equals("int") && rightType.equals("float")) ||
-                    (leftType.equals("float") && rightType.equals("int"))) {
-                return true;
-            }
-            // Allow object reference comparisons
-            if (!leftType.equals("int") && !leftType.equals("boolean") &&
-                    !rightType.equals("int") && !rightType.equals("boolean")) {
-                return true; // Assume reference types can be compared
             }
         }
 
         return false;
     }
 
-    private Void visitBinaryOp(JmmNode node, SymbolTable table) {
-        SpecsCheck.checkNotNull(currentMethod, () -> "Expected current method to be set");
-
-        String op = node.get("op");
-        String leftType = node.getChildren().get(0).hasAttribute("type") ? node.getChildren().get(0).get("type") : "unknown";
-        String rightType = node.getChildren().get(1).hasAttribute("type") ? node.getChildren().get(1).get("type") : "unknown";
-
-        // System.out.print("op: " + op + ", leftType: " + leftType + ", rightType: " + rightType + "\n");
-
-        if (!isOperationValid(op, leftType, rightType)) {
-            // Create error report
-            var message = String.format("Invalid operation: %s between %s and %s", op, leftType, rightType);
-            addReport(Report.newError(
-                    Stage.SEMANTIC,
-                    node.getLine(),
-                    node.getColumn(),
-                    message,
-                    null)
-            );
+    private String getNodeType(JmmNode node) {
+        if (node == null) {
+            return "unknown";
         }
 
-        return null;
+        // Check node kind to determine type
+        String kind = node.getKind();
+        
+        // Print the kind for debugging
+        System.out.println("Node kind: " + kind);
+        
+        // Use Kind enum to check node types
+        if (INTEGER_LITERAL.check(node)) {
+            return "int";
+        } 
+        else if (kind.equals("BooleanLiteral")) {
+            return "boolean";
+        } 
+        
+        // Check if it's an explicit binary operation with determinable result type
+        if (BINARY_EXPR.check(node)) {
+            String op = node.get("op");
+            if (op.equals("<") || op.equals(">") || op.equals("<=") || op.equals(">=") || 
+                op.equals("==") || op.equals("!=") || op.equals("&&") || op.equals("||")) {
+                return "boolean";
+            } 
+            else if (op.equals("+") || op.equals("-") || op.equals("*") || op.equals("/") || op.equals("%")) {
+                return "int";
+            }
+        }
+        
+        // If node has a value attribute that is "true" or "false"
+        if (node.hasAttribute("value")) {
+            String value = node.get("value");
+            if (value.equals("true") || value.equals("false")) {
+                return "boolean";
+            }
+            // Try to parse as integer
+            try {
+                Integer.parseInt(value);
+                return "int";
+            } catch (NumberFormatException e) {
+                // Not an integer
+            }
+        }
+        
+        // Default unknown
+        return "unknown";
     }
 
+    private Void visitBinaryOp(JmmNode node, SymbolTable table) {
+        String op = node.get("op");
+        
+        // Verify we have enough children
+        if (node.getNumChildren() < 2) {
+            System.out.println("Binary operation node has too few children: " + node.getNumChildren());
+            return null;
+        }
+        
+        JmmNode leftNode = node.getChildren().get(0);
+        JmmNode rightNode = node.getChildren().get(1);
+        
+        String leftType = getNodeType(leftNode);
+        String rightType = getNodeType(rightNode);
+        
+        System.out.println("Checking operation: " + op + " between " + leftType + " and " + rightType);
+        
+        // Check if the operation is valid between these types
+        if (!isOperationValid(op, leftType, rightType)) {
+            String message = String.format("Invalid operation: %s between %s and %s", op, leftType, rightType);
+            System.out.println("Adding error report: " + message);
+            
+            // Create and add the error report
+            Report report = Report.newError(
+                Stage.SEMANTIC,
+                node.getLine(),
+                node.getColumn(),
+                message,
+                null
+            );
+            
+            addReport(report);
+        }
+        
+        return null;
+    }
 }
