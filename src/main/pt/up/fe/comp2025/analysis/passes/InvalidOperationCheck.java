@@ -22,6 +22,19 @@ public class InvalidOperationCheck extends AnalysisVisitor {
         // Display the check being performed
         System.out.println("Checking operation: '" + op + "' between types '" + leftType + "' and '" + rightType + "'");
         
+        // Assignment operations
+        if (op.equals("=") || op.equals("+=") || op.equals("-=") || op.equals("*=") || op.equals("/=") || op.equals("%=")) {
+            // Simple assignment: must be compatible types
+            if (op.equals("=")) {
+                return leftType.equals(rightType) || 
+                       (isSubtype(rightType, leftType)) || 
+                       (rightType.equals("null") && !isPrimitiveType(leftType));
+            }
+            
+            // Compound assignments: usually require numeric types
+            return leftType.equals("int") && rightType.equals("int");
+        }
+        
         // Arithmetic operations: +, -, *, /, %
         if (op.equals("+") || op.equals("-") || op.equals("*") || op.equals("/") || op.equals("%")) {
             return leftType.equals("int") && rightType.equals("int");
@@ -46,6 +59,18 @@ public class InvalidOperationCheck extends AnalysisVisitor {
         }
 
         return false;
+    }
+
+    // Helper method to check if a type is a primitive
+    private boolean isPrimitiveType(String type) {
+        return type.equals("int") || type.equals("boolean");
+    }
+
+    // Helper method to check if rightType is a subtype of leftType
+    // In a real compiler, this would check the inheritance hierarchy
+    private boolean isSubtype(String rightType, String leftType) {
+        // Basic implementation - in a real compiler you would check the class hierarchy
+        return false; // Placeholder - replace with actual subtype checking
     }
 
     private String getNodeType(JmmNode node) {
