@@ -29,9 +29,6 @@ public class ArrayOperationCheck extends AnalysisVisitor {
         String arrayName = arrayAssign.get("name");
         // The index is the first child
         JmmNode indexExpr = arrayAssign.getChildren().get(0);
-        // The value to assign is the second child
-        JmmNode valueExpr = arrayAssign.getChildren().get(1);
-        
         // Create a fake node for array identifier to reuse checks
         // In a real implementation, resolve the array identifier properly
         checkArrayAccessByName(arrayName, indexExpr, table);

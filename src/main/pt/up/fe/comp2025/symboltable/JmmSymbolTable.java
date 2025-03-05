@@ -2,12 +2,7 @@ package pt.up.fe.comp2025.symboltable;
 
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.Type;
-import pt.up.fe.comp2025.ast.TypeUtils;
-import pt.up.fe.specs.util.SpecsCheck;
-import pt.up.fe.specs.util.exceptions.NotImplementedException;
-
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class JmmSymbolTable extends AJmmSymbolTable {
 

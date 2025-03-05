@@ -68,8 +68,7 @@ public class ControlFlowTypeCheck extends AnalysisVisitor {
         
         // Key check - the condition must be a boolean expression
         if (!type.equals("boolean")) {
-            String message = "Non-boolean expression used as " + statementType + 
-                           " condition. Found type: " + type;
+            String message = String.format("Non-boolean expression used as %s condition. Found type: %s", statementType, type);
                            
             // Create and add error report
             Report report = Report.newError(

@@ -5,9 +5,6 @@ import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.report.Stage;
 import pt.up.fe.comp2025.analysis.AnalysisVisitor;
-import pt.up.fe.comp2025.ast.Kind;
-import pt.up.fe.specs.util.SpecsCheck;
-
 import static pt.up.fe.comp2025.ast.Kind.*;
 
 public class InvalidOperationCheck extends AnalysisVisitor {
