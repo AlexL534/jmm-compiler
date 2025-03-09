@@ -30,8 +30,10 @@ public class JmmAnalysisImpl implements JmmAnalysis {
 
         var undeclaredVariableCheck = new UndeclaredVariable();
         var invalidOperationCheck = new InvalidOperationCheck();
+        var controlflowtypecheck = new ControlFlowTypeCheck();
+        var arrayoperationcheck = new ArrayOperationCheck();
 
-        return List.of(undeclaredVariableCheck, invalidOperationCheck);
+        return List.of(undeclaredVariableCheck, invalidOperationCheck, controlflowtypecheck, arrayoperationcheck);
     }
 
     @Override

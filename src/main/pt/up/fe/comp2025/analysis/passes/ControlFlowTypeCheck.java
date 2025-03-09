@@ -112,10 +112,8 @@ public class ControlFlowTypeCheck extends AnalysisVisitor {
         // Handle binary expressions like comparisons
         if (kind.equals("BinaryExpr")) {
             String op = node.get("op");
-            if (op.equals("&&") || op.equals("||") || 
-                op.equals("==") || op.equals("!=") ||
-                op.equals("<") || op.equals(">") || 
-                op.equals("<=") || op.equals(">=")) {
+            // Logical and comparison operators return boolean
+            if (op.matches("&&|\\|\\||==|!=|<|>|<=|>=")) {
                 return "boolean";
             } else {
                 return "int";  // Arithmetic operations
@@ -124,12 +122,7 @@ public class ControlFlowTypeCheck extends AnalysisVisitor {
         
         // Handle unary operations
         if (kind.equals("UnaryOp")) {
-            String op = node.get("op");
-            if (op.equals("!")) {
-                return "boolean";
-            } else {
-                return "int";  // ++ and --
-            }
+            return node.get("op").equals("!") ? "boolean" : "int";
         }
         
         // For parenthesized expressions, inspect the inner expression

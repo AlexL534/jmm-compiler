@@ -20,13 +20,9 @@
 13. **objectAssignmentPassExtends** - No class hierarchy analysis for assignment compatibility
 14. **objectAssignmentPassImports** - No import relationship checking for assignments
 
-## Control Flow Tests
-15. **intInIfCondition** - No validation that if conditions are boolean expressions
-16. **arrayInWhileCondition** - No validation that while conditions are boolean expressions
-
 ## Varargs Tests
-17. **varargs** - No support for variable argument parameters
-18. **varargsWrong** - No validation of varargs parameter usage
+15. **varargs** - No support for variable argument parameters
+16. **varargsWrong** - No validation of varargs parameter usage
 
 ## Import Tests
-19. **assumeArguments** - No checking or assumptions about imported method signatures
+17. **assumeArguments** - No checking or assumptions about imported method signatures
