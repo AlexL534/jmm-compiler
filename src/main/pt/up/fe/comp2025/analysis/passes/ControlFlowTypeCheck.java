@@ -5,6 +5,7 @@ import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.report.Stage;
 import pt.up.fe.comp2025.analysis.AnalysisVisitor;
+import static pt.up.fe.comp2025.ast.Kind.*;
 
 /**
  * Checks that conditions in if and while statements are boolean expressions.
@@ -24,9 +25,9 @@ public class ControlFlowTypeCheck extends AnalysisVisitor {
     @Override
     public void buildVisitor() {
         // These MUST match the #NodeName labels in the grammar
-        addVisit("IfStmt", this::visitIfStmt);
-        addVisit("WhileStmt", this::visitWhileStmt);
-        addVisit("MethodDecl", this::visitMethodDecl);
+        addVisit(IF_STMT, this::visitIfStmt);
+        addVisit(WHILE_STMT, this::visitWhileStmt);
+        addVisit(METHOD_DECL, this::visitMethodDecl);
     }
 
     private Void visitMethodDecl(JmmNode node, SymbolTable table) {
@@ -90,27 +91,27 @@ public class ControlFlowTypeCheck extends AnalysisVisitor {
         String kind = node.getKind();
         
         // Handle literal values
-        if (kind.equals("IntegerLiteral")) {
+        if (INTEGER_LITERAL.check(node)) {
             return "int";
         }
         
-        if (kind.equals("BooleanLiteral")) {
+        if (BOOLEAN_LITERAL.check(node)) {
             return "boolean";
         }
         
         // Handle variable references
-        if (kind.equals("VarRefExpr")) {
+        if (VAR_REF_EXPR.check(node)) {
             String varName = node.get("name");
             return getVariableType(varName, table);
         }
         
         // Handle arrays - crucial for arrayInWhileCondition test
-        if (kind.equals("ArrayCreation") || kind.equals("ArrayType") || kind.equals("ArrayLiteral")) {
+        if (ARRAY_CREATION.check(node) || ARRAY_TYPE.check(node) || ARRAY_LITERAL.check(node)) {
             return "int[]";  // In this grammar, arrays are int arrays
         }
         
         // Handle binary expressions like comparisons
-        if (kind.equals("BinaryExpr")) {
+        if (BINARY_EXPR.check(node)) {
             String op = node.get("op");
             // Logical and comparison operators return boolean
             if (op.matches("&&|\\|\\||==|!=|<|>|<=|>=")) {
@@ -121,12 +122,12 @@ public class ControlFlowTypeCheck extends AnalysisVisitor {
         }
         
         // Handle unary operations
-        if (kind.equals("UnaryOp")) {
+        if (UNARY_OP.check(node)) {
             return node.get("op").equals("!") ? "boolean" : "int";
         }
         
         // For parenthesized expressions, inspect the inner expression
-        if (kind.equals("Parentheses") && node.getNumChildren() > 0) {
+        if (PARENTHESES.check(node) && node.getNumChildren() > 0) {
             return determineType(node.getChildren().get(0), table);
         }
         

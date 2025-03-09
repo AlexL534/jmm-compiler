@@ -27,7 +27,19 @@ public enum Kind {
     EXPR,
     BINARY_EXPR,
     INTEGER_LITERAL,
-    VAR_REF_EXPR;
+    VAR_REF_EXPR,
+    ARRAY_SUBSCRIPT,
+    ARRAY_ASSIGN_STMT,
+    ARRAY_LITERAL,
+    ARRAY_CREATION,
+    ARRAY_TYPE,
+    BOOLEAN_LITERAL,
+    STRING_LITERAL,
+    IF_STMT,
+    WHILE_STMT,
+    UNARY_OP,
+    PARENTHESES,
+    ID_TYPE;
 
 
     private final String name;
