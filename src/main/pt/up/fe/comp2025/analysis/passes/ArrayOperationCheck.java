@@ -13,9 +13,49 @@ public class ArrayOperationCheck extends AnalysisVisitor {
     @Override
     public void buildVisitor() {
         addVisit(ARRAY_SUBSCRIPT, this::visitArrayAccess);
-        addVisit(ARRAY_ASSIGN_STMT, this::visitArrayAssignment);
         addVisit(ARRAY_LITERAL, this::visitArrayLiteral);
-        addVisit(ASSIGN_STMT, this::visitAssignment);
+        // Add direct visit for binary expressions with assignment
+        addVisit(BINARY_EXPR, this::visitBinaryExpr);
+    }
+    
+    // New method to catch assignment of array literals in binary expressions
+    private Void visitBinaryExpr(JmmNode node, SymbolTable table) {
+        if (!node.get("op").equals("=")) {
+            return null; // Only process assignment operations
+        }
+        
+        JmmNode leftExpr = node.getChildren().get(0);
+        JmmNode rightExpr = node.getChildren().get(1);
+        
+        // We're only interested in cases where right side is an array literal
+        if (!ARRAY_LITERAL.check(rightExpr)) {
+            return null;
+        }
+        
+        // Get the type of the left side
+        String leftType;
+        if (VAR_REF_EXPR.check(leftExpr)) {
+            leftType = getVariableType(leftExpr.get("name"), table);
+        } else {
+            leftType = getExpressionType(leftExpr, table);
+        }
+        
+        // Check if the left side is an array type
+        if (!leftType.endsWith("[]")) {
+            String message = "Cannot assign array literal to non-array type " + leftType;
+            
+            Report report = Report.newError(
+                Stage.SEMANTIC,
+                node.getLine(),
+                node.getColumn(),
+                message,
+                null
+            );
+            
+            addReport(report);
+        }
+        
+        return null;
     }
 
     private Void visitArrayLiteral(JmmNode arrayLiteral, SymbolTable table) {
@@ -43,32 +83,6 @@ public class ArrayOperationCheck extends AnalysisVisitor {
         
         return null;
     }
-    
-    private Void visitAssignment(JmmNode assignStmt, SymbolTable table) {
-        String varName = assignStmt.get("name");
-        JmmNode valueExpr = assignStmt.getChildren().get(0);
-        
-        String varType = getVariableType(varName, table);
-        String exprType = getExpressionType(valueExpr, table);
-        
-        // Check assignment compatibility between variable and expression
-        if (valueExpr.getKind().equals("ArrayLiteral")) {
-            if (!varType.endsWith("[]")) {
-                String message = "Cannot assign array literal to non-array type " + varType;
-                
-                addReport(Report.newError(
-                    Stage.SEMANTIC,
-                    assignStmt.getLine(),
-                    assignStmt.getColumn(),
-                    message,
-                    null
-                ));
-                return null;
-            }
-        }
-        
-        return null;
-    }
 
     private Void visitArrayAccess(JmmNode arrayAccess, SymbolTable table) {
         // First child is the array expression
@@ -77,17 +91,6 @@ public class ArrayOperationCheck extends AnalysisVisitor {
         JmmNode indexExpr = arrayAccess.getChildren().get(1);
         
         checkArrayAccess(arrayExpr, indexExpr, table);
-        return null;
-    }
-
-    private Void visitArrayAssignment(JmmNode arrayAssign, SymbolTable table) {
-        // The array identifier is available in the node itself
-        String arrayName = arrayAssign.get("name");
-        // The index is the first child
-        JmmNode indexExpr = arrayAssign.getChildren().get(0);
-        // In a real implementation, resolve the array identifier properly
-        checkArrayAccessByName(arrayName, indexExpr, table);
-        
         return null;
     }
 

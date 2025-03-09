@@ -18,15 +18,7 @@ This document lists semantic analysis tests that are currently not implemented o
 9. **incompatibleReturn** - Missing validation that returned values match method return type
 10. **assumeArguments** - Missing verification of imported method signatures
 
-## Array Operation Tests
-
-11. **arrayAccessOnInt** - Missing validation that array access operations are performed only on array types
-12. **arrayIndexNotInt** - Missing validation that array indices are integer expressions
-13. **arrayInit** - Missing validation of array initialization syntax
-14. **arrayInitWrong1** - Missing type compatibility checks for array elements
-15. **arrayInitWrong2** - Missing type compatibility checks for array elements in complex cases
-
 ## Varargs Tests
 
-16. **varargs** - Missing support for variable argument parameters
-17. **varargsWrong** - Missing validation of varargs parameter usage rules
+11. **varargs** - Missing support for variable argument parameters
+12. **varargsWrong** - Missing validation of varargs parameter usage rules

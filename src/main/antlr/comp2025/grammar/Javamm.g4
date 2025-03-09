@@ -88,7 +88,7 @@ expr
     | expr op = '&&' expr #BinaryExpr
     | expr op='||' expr #BinaryExpr
     | expr op=('=' | '+=' | '-=' | '*=' | '/=' | '%=') expr #BinaryExpr
-    | expr '[' expr ']' (expr)? #ArraySubscript
+    | expr '[' expr ']' #ArraySubscript
     | '[' (expr (',' expr)*)? ']' #ArrayLiteral
     | 'this' #ThisExpr
     | value=INTEGER #IntegerLiteral

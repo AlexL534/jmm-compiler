@@ -39,6 +39,9 @@ public enum Kind {
     WHILE_STMT,
     UNARY_OP,
     PARENTHESES,
+    THIS_EXPR,
+    METHOD_CALL,
+    NEW_OBJECT,
     ID_TYPE;
 
 
