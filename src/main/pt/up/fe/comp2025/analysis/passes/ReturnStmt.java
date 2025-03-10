@@ -26,83 +26,12 @@ public class ReturnStmt extends AnalysisVisitor {
         return null;
     }
 
-    private Type getReturnType(JmmNode returnStmt, SymbolTable table){
-        String type = "int";
-        boolean isArray = false;
-
-        if(Kind.INTEGER_LITERAL.check(returnStmt)){
-            type = "int";
-        }
-        else if(Kind.BOOLEAN_LITERAL.check(returnStmt)){
-            type = "boolean";
-        }
-        else if(Kind.VAR_REF_EXPR.check(returnStmt)) {
-            //is a field
-            for (Symbol field : table.getFields()) {
-                if (field.getName().equals(returnStmt.get("name"))) {
-                    type = field.getType().getName();
-                    isArray = field.getType().isArray();
-                }
-            }
-            var parameters = table.getParameters(currentMethod);
-            // Var is a parameter
-            if (parameters.stream().anyMatch(param -> param.getName().equals(returnStmt.get("name")))) {
-                for (Symbol param : parameters) {
-                    if (param.getName().equals(returnStmt.get("name"))) {
-                        type = param.getType().getName();
-                        isArray = param.getType().isArray();
-
-                    }
-                }
-            }
-            // Var is a declared variable
-            var locals = table.getLocalVariables(currentMethod);
-            if (locals.stream()
-                    .anyMatch(varDecl -> varDecl.getName().equals(returnStmt.get("name")))) {
-                for (Symbol varDecl : locals) {
-                    if (varDecl.getName().equals(returnStmt.get("name"))) {
-                        type = varDecl.getType().getName();
-                        isArray = varDecl.getType().isArray();
-                    }
-                }
-
-            }
-
-        }
-        else if(Kind.METHOD_CALL.check(returnStmt)){
-            var methodType = table.getReturnType(returnStmt.get("name"));
-            if(methodType == null){
-                return null;
-            }
-            type = table.getReturnType(returnStmt.get("name")).getName();
-            isArray = table.getReturnType(returnStmt.get("name")).isArray();
-        }
-        else if(Kind.ARRAY_LENGTH.check(returnStmt)){
-            type = "int";
-            isArray = false;
-        }
-        else if(Kind.ARRAY_CREATION.check(returnStmt)){
-            type = "int";
-            isArray = true;
-        }
-        else if(Kind.ARRAY_SUBSCRIPT.check(returnStmt)){
-            type = "int";
-            isArray = false;
-        }
-        else if(Kind.ARRAY_LITERAL.check(returnStmt)){
-            type = "int";
-            isArray = true;
-        }
-        else{
-            return this.getReturnType(returnStmt.getChild(0), table);
-        }
-        return new Type(type, isArray);
-
-    }
 
     private Void visitReturnStmt(JmmNode returnStmt, SymbolTable table) {
-        //TypeUtils aux = new TypeUtils(table);
-        Type exprType = this.getReturnType(returnStmt.getChild(0), table);
+        TypeUtils utils = new TypeUtils(table);
+        utils.setCurrentMethod(currentMethod);
+
+        Type exprType = utils.getExprType(returnStmt.getChild(0));
 
         if(exprType == null){
             Report report = Report.newError(

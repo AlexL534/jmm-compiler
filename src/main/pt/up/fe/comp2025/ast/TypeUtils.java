@@ -8,6 +8,8 @@ import pt.up.fe.comp2025.symboltable.JmmSymbolTable;
 
 import java.util.Objects;
 
+import static pt.up.fe.comp2025.ast.Kind.BINARY_EXPR;
+
 /**
  * Utility methods regarding types.
  */
@@ -124,6 +126,16 @@ public class TypeUtils {
             else if(Kind.OBJECT_CREATION.check(expr)){
                 type = expr.get("name");
                 isArray = false;
+        }
+        // Handle binary expressions like comparisons
+        else if (BINARY_EXPR.check(expr)) {
+            String op = expr.get("op");
+            // Logical and comparison operators return boolean
+            if (op.matches("&&|\\|\\||==|!=|<|>|<=|>=")) {
+                return new Type("boolean", false);
+            } else {
+                return new Type("int", false);  // Arithmetic operations
+            }
         }
             else{
             return this.getExprType(expr.getChild(0));

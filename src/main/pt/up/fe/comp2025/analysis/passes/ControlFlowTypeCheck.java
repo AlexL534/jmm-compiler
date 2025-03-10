@@ -5,6 +5,8 @@ import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.report.Stage;
 import pt.up.fe.comp2025.analysis.AnalysisVisitor;
+import pt.up.fe.comp2025.ast.TypeUtils;
+
 import static pt.up.fe.comp2025.ast.Kind.*;
 
 /**
@@ -65,7 +67,10 @@ public class ControlFlowTypeCheck extends AnalysisVisitor {
      * Check that a condition is boolean. If not, report an error.
      */
     private void checkCondition(JmmNode condition, String statementType, SymbolTable table) {
-        String type = determineType(condition, table);
+        TypeUtils utils = new TypeUtils(table);
+        utils.setCurrentMethod(currentMethod);
+
+        String type = utils.getExprType(condition).getName();//determineType(condition, table);
         
         // Key check - the condition must be a boolean expression
         if (!type.equals("boolean")) {
