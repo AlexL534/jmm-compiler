@@ -70,6 +70,10 @@ public class ReturnStmt extends AnalysisVisitor {
 
         }
         else if(Kind.METHOD_CALL.check(returnStmt)){
+            var methodType = table.getReturnType(returnStmt.get("name"));
+            if(methodType == null){
+                return null;
+            }
             type = table.getReturnType(returnStmt.get("name")).getName();
             isArray = table.getReturnType(returnStmt.get("name")).isArray();
         }
@@ -99,6 +103,19 @@ public class ReturnStmt extends AnalysisVisitor {
     private Void visitReturnStmt(JmmNode returnStmt, SymbolTable table) {
         //TypeUtils aux = new TypeUtils(table);
         Type exprType = this.getReturnType(returnStmt.getChild(0), table);
+
+        if(exprType == null){
+            Report report = Report.newError(
+                    Stage.SEMANTIC,
+                    returnStmt.getLine(),
+                    returnStmt.getColumn(),
+                    "Could not evaluate the return expression",
+                    null
+            );
+
+            return null;
+        }
+
         Type methodType = table.getReturnType(currentMethod);
         if((!methodType.getName().equals(exprType.getName())) || (methodType.isArray() != exprType.isArray())){
             String message = String.format("Invalid return type: %s and %s", exprType.getName(), methodType.getName());

@@ -15,9 +15,14 @@ public class TypeUtils {
 
 
     private final JmmSymbolTable table;
+    private String currentMethod = "";
 
     public TypeUtils(SymbolTable table) {
         this.table = (JmmSymbolTable) table;
+    }
+
+    public void setCurrentMethod(String currentMethod) {
+        this.currentMethod = currentMethod;
     }
 
     public static Type newIntType() {
@@ -46,7 +51,6 @@ public class TypeUtils {
      */
     public Type getExprType(JmmNode expr) {
 
-        // TODO: Update when there are new types
         String type = "int";
         boolean isArray = false;
 
@@ -63,7 +67,66 @@ public class TypeUtils {
                     isArray = field.getType().isArray();
                 }
             }
+            var parameters = table.getParameters(currentMethod);
+            if(parameters != null) {
+                // Var is a parameter
+                if (parameters.stream().anyMatch(param -> param.getName().equals(expr.get("name")))) {
+                    for (Symbol param : parameters) {
+                        if (param.getName().equals(expr.get("name"))) {
+                            type = param.getType().getName();
+                            isArray = param.getType().isArray();
 
+                        }
+                    }
+                }
+            }
+
+            // Var is a declared variable
+            var locals = table.getLocalVariables(currentMethod);
+            if(locals != null) {
+                if (locals.stream()
+                        .anyMatch(varDecl -> varDecl.getName().equals(expr.get("name")))) {
+                    for (Symbol varDecl : locals) {
+                        if (varDecl.getName().equals(expr.get("name"))) {
+                            type = varDecl.getType().getName();
+                            isArray = varDecl.getType().isArray();
+                        }
+                    }
+
+                }
+            }
+
+        }
+        else if(Kind.METHOD_CALL.check(expr)){
+            var methodType = table.getReturnType(expr.get("name"));
+            if(methodType == null){
+                return null;
+            }
+            type = table.getReturnType(expr.get("name")).getName();
+            isArray = table.getReturnType(expr.get("name")).isArray();
+        }
+            else if(Kind.ARRAY_LENGTH.check(expr)){
+            type = "int";
+            isArray = false;
+        }
+            else if(Kind.ARRAY_CREATION.check(expr)){
+            type = "int";
+            isArray = true;
+        }
+            else if(Kind.ARRAY_SUBSCRIPT.check(expr)){
+            type = "int";
+            isArray = false;
+        }
+            else if(Kind.ARRAY_LITERAL.check(expr)){
+            type = "int";
+            isArray = true;
+        }
+            else if(Kind.OBJECT_CREATION.check(expr)){
+                type = expr.get("name");
+                isArray = false;
+        }
+            else{
+            return this.getExprType(expr.getChild(0));
         }
 
 

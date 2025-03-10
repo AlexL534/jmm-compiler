@@ -72,8 +72,8 @@ stmt
     | 'if' '(' expr ')' stmt 'else' stmt #IfStmt
     | 'while' '(' expr ')' stmt #WhileStmt
     | expr ';' #ExprStmt
-    | ID '=' expr ';' #AssignStmt
-    | ID '[' expr ']' '=' expr ';' #ArrayAssignStmt
+    | varName=ID '=' expr ';' #AssignStmt
+    | varName=ID '[' expr ']' '=' expr ';' #ArrayAssignStmt
     ;
 
 expr

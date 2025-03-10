@@ -43,6 +43,7 @@ public enum Kind {
     THIS_EXPR,
     METHOD_CALL,
     NEW_OBJECT,
+    OBJECT_CREATION,
     ID_TYPE;
 
 

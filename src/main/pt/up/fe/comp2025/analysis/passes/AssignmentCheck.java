@@ -1,7 +1,14 @@
 package pt.up.fe.comp2025.analysis.passes;
 
+import pt.up.fe.comp.jmm.analysis.table.Symbol;
+import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
+import pt.up.fe.comp.jmm.analysis.table.Type;
+import pt.up.fe.comp.jmm.ast.JmmNode;
+import pt.up.fe.comp.jmm.report.Report;
+import pt.up.fe.comp.jmm.report.Stage;
 import pt.up.fe.comp2025.analysis.AnalysisVisitor;
 import pt.up.fe.comp2025.ast.Kind;
+import pt.up.fe.comp2025.ast.TypeUtils;
 
 import static pt.up.fe.comp2025.ast.Kind.RETURN_STMT;
 
@@ -9,8 +16,87 @@ public class AssignmentCheck extends AnalysisVisitor {
     private String currentMethod;
     @Override
     public void buildVisitor() {
-        //addVisit(Kind.METHOD_DECL, this::visitMethodDecl);
+        addVisit(Kind.METHOD_DECL, this::visitMethodDecl);
+        addVisit(Kind.ASSIGN_STMT, this::visitAssign);
         //addVisit(RETURN_STMT, this::visitReturnStmt);
     }
+
+    private Void visitMethodDecl(JmmNode method, SymbolTable table) {
+        currentMethod = method.get("name");
+        return null;
+    }
+
+    private Void visitAssign(JmmNode node, SymbolTable table){
+        TypeUtils utils = new TypeUtils(table);
+        utils.setCurrentMethod(currentMethod);
+
+        //First get the Type of the variable that is being assigned
+        var varName = node.get("varName");
+        String typeVar = "int";
+        boolean isArrayVar = false;
+
+        for (Symbol field : table.getFields()) {
+            if (field.getName().equals(varName)) {
+                typeVar = field.getType().getName();
+                isArrayVar = field.getType().isArray();
+            }
+        }
+        var parameters = table.getParameters(currentMethod);
+        // Var is a parameter
+        if(parameters != null) {
+            if (parameters.stream().anyMatch(param -> param.getName().equals(varName))) {
+                for (Symbol param : parameters) {
+                    if (param.getName().equals(varName)) {
+                        typeVar = param.getType().getName();
+                        isArrayVar = param.getType().isArray();
+
+                    }
+                }
+            }
+        }
+        // Var is a declared variable
+        var locals = table.getLocalVariables(currentMethod);
+        if(locals != null) {
+            if (locals.stream()
+                    .anyMatch(varDecl -> varDecl.getName().equals(varName))) {
+                for (Symbol varDecl : locals) {
+                    if (varDecl.getName().equals(varName)) {
+                        typeVar = varDecl.getType().getName();
+                        isArrayVar = varDecl.getType().isArray();
+                    }
+                }
+            }
+        }
+
+        //get The expression type
+        JmmNode expr = node.getChild(0);
+        Type exprType = utils.getExprType(expr);
+
+        if(exprType == null){
+            Report report = Report.newError(
+                    Stage.SEMANTIC,
+                    node.getLine(),
+                    node.getColumn(),
+                    "Could not evaluate the expressions type of the assingment",
+                    null
+            );
+        }
+
+        if((!exprType.getName().equals(typeVar)) || (isArrayVar != exprType.isArray())){
+            String message = String.format("Invalid return assignment: %s and %s", exprType.getName(), typeVar);
+            Report report = Report.newError(
+                    Stage.SEMANTIC,
+                    node.getLine(),
+                    node.getColumn(),
+                    message,
+                    null
+            );
+
+            addReport(report);
+        }
+
+        return null;
+    }
+
 
 }

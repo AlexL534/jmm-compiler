@@ -33,8 +33,9 @@ public class JmmAnalysisImpl implements JmmAnalysis {
         var controlflowtypecheck = new ControlFlowTypeCheck();
         var arrayoperationcheck = new ArrayOperationCheck();
         var returnStmt = new ReturnStmt();
+        var assignmentCheck = new AssignmentCheck();
 
-        return List.of(undeclaredVariableCheck, invalidOperationCheck, controlflowtypecheck, arrayoperationcheck, returnStmt);
+        return List.of(undeclaredVariableCheck, invalidOperationCheck, controlflowtypecheck, arrayoperationcheck, returnStmt, assignmentCheck);
     }
 
     @Override
