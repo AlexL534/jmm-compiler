@@ -38,7 +38,6 @@ public class JmmSymbolTableBuilder {
 
         reports = new ArrayList<>();
 
-        // TODO: After your grammar supports more things inside the program (e.g., imports) you will have to change this
         var imports = buildImports(root);
         var classDeclarations = root.getChildren(CLASS_DECL);
         if(classDeclarations.isEmpty()){

@@ -33,6 +33,7 @@ public enum Kind {
     ARRAY_LITERAL,
     ARRAY_CREATION,
     ARRAY_TYPE,
+    ARRAY_LENGTH,
     BOOLEAN_LITERAL,
     STRING_LITERAL,
     IF_STMT,

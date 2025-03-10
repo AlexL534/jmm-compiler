@@ -49,8 +49,12 @@ returnType
     : type
     ;
 
+returnStmt
+    : RETURN expr ';'
+    ;
+
 methodDecl
-    : (PUBLIC) ? returnType name=ID '(' (param (',' param)*)? ')' '{' varDecl* stmt* RETURN expr ';' '}'
+    : (PUBLIC) ? returnType name=ID '(' (param (',' param)*)? ')' '{' varDecl* stmt* returnStmt '}'
     | (PUBLIC) ? 'static' 'void' name='main' '(' STRING '[' ']' ID ')' '{' varDecl* stmt* '}'
     ;
 
@@ -80,14 +84,10 @@ expr
     | expr '.' name=ID '(' (expr (',' expr)*)? ')' #MethodCall
     | expr '.' name=ID #FieldAccess
     | op='!' expr #UnaryOp
-    | expr op=('++' | '--') #UnaryOp
-    | expr op=('*' | '/' | '%') expr #BinaryExpr
+    | expr op=('*' | '/' ) expr #BinaryExpr
     | expr op=('+' | '-') expr #BinaryExpr
-    | expr op=('<' | '<=' | '>' | '>=') expr #BinaryExpr
-    | expr op = ('==' | '!=') expr #BinaryExpr
+    | expr op='<' expr #BinaryExpr
     | expr op = '&&' expr #BinaryExpr
-    | expr op='||' expr #BinaryExpr
-    | expr op=('=' | '+=' | '-=' | '*=' | '/=' | '%=') expr #BinaryExpr
     | expr '[' expr ']' #ArraySubscript
     | '[' (expr (',' expr)*)? ']' #ArrayLiteral
     | 'this' #ThisExpr
