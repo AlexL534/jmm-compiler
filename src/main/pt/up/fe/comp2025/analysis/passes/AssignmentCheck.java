@@ -77,9 +77,16 @@ public class AssignmentCheck extends AnalysisVisitor {
                     Stage.SEMANTIC,
                     node.getLine(),
                     node.getColumn(),
-                    "Could not evaluate the expressions type of the assingment",
+                    "Could not evaluate the expressions type of the assignment",
                     null
             );
+        }
+
+        //check if any of the types is imported (imported classes don't need type checking)
+        for(String imp : table.getImports() ){
+            if(imp.equals(typeVar) || imp.equals(exprType.getName())){
+                return null;
+            }
         }
 
         if((!exprType.getName().equals(typeVar)) || (isArrayVar != exprType.isArray())){
