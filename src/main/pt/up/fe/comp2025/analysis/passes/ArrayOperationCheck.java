@@ -24,7 +24,7 @@ public class ArrayOperationCheck extends AnalysisVisitor {
         currentMethod = method.get("name");
         return null;
     }
-    
+
     private Void visitArrayLiteral(JmmNode arrayLiteral, SymbolTable table) {
         // Check that all elements in an array literal are of the same type
         String expectedType = "int";

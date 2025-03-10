@@ -18,7 +18,6 @@ public class AssignmentCheck extends AnalysisVisitor {
     public void buildVisitor() {
         addVisit(Kind.METHOD_DECL, this::visitMethodDecl);
         addVisit(Kind.ASSIGN_STMT, this::visitAssign);
-        //addVisit(RETURN_STMT, this::visitReturnStmt);
     }
 
     private Void visitMethodDecl(JmmNode method, SymbolTable table) {

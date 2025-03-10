@@ -45,6 +45,18 @@ public class ReturnStmt extends AnalysisVisitor {
             return null;
         }
 
+        //check if any of the types is imported (imported classes don't need type checking)
+        for(String imp : table.getImports() ){
+            if(imp.equals(exprType.getName()) ){
+                return null;
+            }
+        }
+
+        //Extended classes to imports are ignored in type check
+        if(table.getImports().contains(table.getSuper()) && (table.getClassName().equals(exprType.getName()))){
+            return null;
+        }
+
         Type methodType = table.getReturnType(currentMethod);
         if((!methodType.getName().equals(exprType.getName())) || (methodType.isArray() != exprType.isArray())){
             String message = String.format("Invalid return type: %s and %s", exprType.getName(), methodType.getName());
