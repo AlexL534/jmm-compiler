@@ -84,9 +84,14 @@ public class AssignmentCheck extends AnalysisVisitor {
 
         //check if any of the types is imported (imported classes don't need type checking)
         for(String imp : table.getImports() ){
-            if(imp.equals(typeVar) || imp.equals(exprType.getName())){
+            if(imp.equals(exprType.getName()) ){
                 return null;
             }
+        }
+
+        //Extended classes to imports are ignored in type check
+        if(table.getImports().contains(table.getSuper()) && (table.getClassName().equals(exprType.getName()))){
+            return null;
         }
 
         if((!exprType.getName().equals(typeVar)) || (isArrayVar != exprType.isArray())){

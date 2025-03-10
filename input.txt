@@ -1,29 +1,18 @@
+import A;
 
-class MethodsAndFields{
-	int field1;
-	boolean field2;
-	MethodsAndFields field3;
+class CallToMethodAssumedInImport extends A {
 
-	public int getField1(){
-	    MethodsAndFields a;
-	    a = new MethodsAndFields();
-		return a.getField2();
-	}
+    public static void main(String[] args) {
 
-	public boolean getField2(){
-		return field2;
-	}
+    }
 
-	public MethodsAndFields getField3(){
-		return field3;
-	}
+    public int foo() {
+        A a;
+        a = new A();
 
-	public int[] all(int a, boolean b, MethodsAndFields maf){
-		int[] c;
-		return c;
-	}
+        // Assume bar() is in A
+        a.bar();
 
-	public static void main(String[] args){
-
-	}
+        return 0;
+    }
 }
