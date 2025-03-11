@@ -41,6 +41,14 @@ public class TypeUtils {
         var name = typeNode.get("value");
         var isArray = typeNode.getKind().equals("ArrayType");
 
+        if(!isArray) {
+            isArray = typeNode.getKind().equals("VarArgType");
+
+            if(isArray) {
+                name += " vararg";
+            }
+        }
+
         return new Type(name, isArray);
     }
 
@@ -125,6 +133,10 @@ public class TypeUtils {
         }
             else if(Kind.OBJECT_CREATION.check(expr)){
                 type = expr.get("name");
+                isArray = false;
+        }
+            else if(Kind.THIS_EXPR.check(expr)){
+                type = table.getClassName();
                 isArray = false;
         }
         // Handle binary expressions like comparisons
