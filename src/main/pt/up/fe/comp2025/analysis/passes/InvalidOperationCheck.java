@@ -1,6 +1,5 @@
 package pt.up.fe.comp2025.analysis.passes;
 
-import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.JmmNode;
@@ -19,10 +18,27 @@ public class InvalidOperationCheck extends AnalysisVisitor {
     public void buildVisitor() {
         addVisit(Kind.METHOD_DECL, this::visitMethodDecl);
         addVisit(BINARY_EXPR, this::visitBinaryOp);
+        addVisit(THIS_EXPR, this::thisOperations);
     }
 
     private Void visitMethodDecl(JmmNode method, SymbolTable table) {
         currentMethod = method.get("name");
+        return null;
+    }
+
+    private Void thisOperations(JmmNode node, SymbolTable table) {
+        //checks if the "this" operation is being done inside the main function (the only static and void function allowed in the language)
+        if(table.getReturnType(currentMethod).getName().equals("void")) {
+            Report report = Report.newError(
+                    Stage.SEMANTIC,
+                    node.getLine(),
+                    node.getColumn(),
+                    "Cannot use a 'this' operator inside a static function",
+                    null
+            );
+
+            addReport(report);
+        };
         return null;
     }
 

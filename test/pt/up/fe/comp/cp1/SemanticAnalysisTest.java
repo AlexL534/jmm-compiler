@@ -182,5 +182,13 @@ public class SemanticAnalysisTest {
         System.out.println(result.getReports());
     }
 
+    @Test
+    public void thisInStatic() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ThisInsideStatic.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
 
 }
