@@ -207,7 +207,7 @@ public class SemanticAnalysisTest {
     }
 
     @Test
-    public void ReturnTypeCannotBeVarargs() {
+    public void returnTypeCannotBeVarargs() {
         var result = TestUtils
                 .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ReturnTypeCannotBeVarargs.jmm"));
         TestUtils.mustFail(result);
@@ -215,11 +215,15 @@ public class SemanticAnalysisTest {
     }
 
     @Test
-    public void FieldDeclarationCannotBeVarargs() {
+    public void fieldDeclarationCannotBeVarargs() {
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/FieldDeclarationCannotBeVarargs.jmm"));
         TestUtils.mustFail(result);
         System.out.println(result.getReports());
     }
 
-
+    @Test
+    public void variableDeclarationCannotBeVarargs() {
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/VariableDeclarationCannotBeVarargs.jmm"));
+        TestUtils.mustFail(result);
+    }
 }
