@@ -1,0 +1,6 @@
+class FieldDeclarationCannotBeVarargs {
+    public int... myField;
+
+    public static void main(String[] args) {
+    }
+}

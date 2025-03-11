@@ -1,4 +1,4 @@
-class ReturnTypeNotVararg {
+class ReturnTypeCannotBeVarargs {
     public int... niceMethod() {
         return new int[] {1, 2, 3};
     }
