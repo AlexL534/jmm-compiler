@@ -190,5 +190,21 @@ public class SemanticAnalysisTest {
         System.out.println(result.getReports());
     }
 
+    @Test
+    public void thisIsObject() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ThisIsObject.jmm"));
+        TestUtils.noErrors(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void thisIsObjectExtends() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ThisIsObjectExtends.jmm"));
+        TestUtils.noErrors(result);
+        System.out.println(result.getReports());
+    }
+
 
 }

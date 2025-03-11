@@ -1,0 +1,12 @@
+class ObjectThis {
+    int a;
+    public static void main(String[] args) {
+
+    }
+
+    public int niceThis(){
+        ObjectThis b;
+        b = this;
+        return 0;
+    }
+}
