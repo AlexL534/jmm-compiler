@@ -5,6 +5,6 @@ class MultipleVarargs {
 
     public static void main(String[] args) {
         MultipleVarargs obj = new MultipleVarargs();
-        System.out.println(obj.invalidMethod(new int[]{1, 2}, new int[]{3, 4}));
+        int result = obj.invalidMethod(new int[]{1, 2}, new int[]{3, 4});
     }
 }

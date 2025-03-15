@@ -5,6 +5,6 @@ class VarargNotLast {
 
     public static void main(String[] args) {
         VarargNotLast obj = new VarargNotLast();
-        System.out.println(obj.invalidMethod(new int[]{1, 2, 3}, 5));
+        int result = obj.invalidMethod(new int[]{1, 2, 3}, 5);
     }
 }
