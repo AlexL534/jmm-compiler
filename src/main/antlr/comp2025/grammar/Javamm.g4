@@ -11,7 +11,7 @@ RETURN : 'return' ;
 BOOLEAN: 'boolean';
 STRING: 'String';
 
-INTEGER : [0] | ([1-9][0-9]*);
+INTEGER : [0-9]+;
 
 ID : [a-zA-Z_$][a-zA-Z_0-9$]* ;
 
@@ -69,7 +69,7 @@ type
 
 stmt
     : '{' stmt* '}' #BlockStmt
-    | 'if' '(' expr ')' stmt 'else' stmt #IfStmt
+    | 'if' '(' expr ')' stmt ('else' stmt)? #IfStmt
     | 'while' '(' expr ')' stmt #WhileStmt
     | expr ';' #ExprStmt
     | varName=ID '=' expr ';' #AssignStmt
