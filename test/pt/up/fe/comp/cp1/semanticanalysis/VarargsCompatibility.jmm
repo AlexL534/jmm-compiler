@@ -1,0 +1,25 @@
+class VarargsCompatibility {
+
+    public static void main(String[] args) {
+
+    }
+
+    public int foo(int... args) {
+        return args.length;
+    }
+
+    public int bar() {
+        VarargsCompatibility a;
+        int result;
+
+        a = new VarargsCompatibility();
+
+        // Directly passing arguments
+        result = a.foo(1, 2, 3);
+
+        // Directly passing arguments
+        result = a.foo(4, 5, 6);
+
+        return result;
+    }
+}
