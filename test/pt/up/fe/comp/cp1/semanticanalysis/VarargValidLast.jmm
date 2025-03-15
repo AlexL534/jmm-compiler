@@ -1,0 +1,10 @@
+class VarargValidLast {
+    public int validMethod(int a, int... nums) {
+        return a + nums.length;
+    }
+
+    public static void main(String[] args) {
+        VarargValidLast obj = new VarargValidLast();
+        int result = obj.validMethod(5, 1, 2, 3);
+    }
+}

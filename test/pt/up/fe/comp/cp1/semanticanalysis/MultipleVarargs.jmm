@@ -1,0 +1,10 @@
+class MultipleVarargs {
+    public int invalidMethod(int... nums1, int... nums2) {
+        return nums1.length + nums2.length;
+    }
+
+    public static void main(String[] args) {
+        MultipleVarargs obj = new MultipleVarargs();
+        int result = obj.invalidMethod(new int[]{1, 2}, new int[]{3, 4});
+    }
+}
