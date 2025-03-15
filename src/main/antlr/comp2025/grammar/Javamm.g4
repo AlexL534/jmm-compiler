@@ -50,7 +50,7 @@ returnType
     ;
 
 returnStmt
-    : RETURN expr ';'
+    : RETURN expr? ';'
     ;
 
 methodDecl

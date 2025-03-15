@@ -237,14 +237,14 @@ public class SemanticAnalysisTest {
 
     @Test
     public void varargNotLast() {
-        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/VarArgNotLast.jmm"));
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/VarargNotLast.jmm"));
         TestUtils.mustFail(result);
         System.out.println(result.getReports());
     }
 
     @Test
     public void varargValidLast() {
-        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/VarArgValidLast.jmm"));
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/VarargValidLast.jmm"));
         TestUtils.noErrors(result);
         System.out.println(result.getReports());
     }

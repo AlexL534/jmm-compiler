@@ -1,7 +1,10 @@
 class VarargNotLast {
-    public void invalidMethod(int... nums, int a) {
+    public int invalidMethod(int... nums, int a) {
+        return a + (nums.length > 0 ? nums[0] : 0);
     }
 
     public static void main(String[] args) {
+        VarargNotLast obj = new VarargNotLast();
+        System.out.println(obj.invalidMethod(new int[]{1, 2, 3}, 5));
     }
 }
