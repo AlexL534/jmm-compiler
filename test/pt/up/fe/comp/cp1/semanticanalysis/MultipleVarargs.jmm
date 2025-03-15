@@ -1,0 +1,7 @@
+class MultipleVarargs {
+    public void invalidMethod(int... nums1, int... nums2) {
+    }
+
+    public static void main(String[] args) {
+    }
+}

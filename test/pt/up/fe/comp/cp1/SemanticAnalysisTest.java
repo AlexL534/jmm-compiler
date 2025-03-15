@@ -225,5 +225,27 @@ public class SemanticAnalysisTest {
     public void variableDeclarationCannotBeVarargs() {
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/VariableDeclarationCannotBeVarargs.jmm"));
         TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void multipleVarargs() {
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/MultipleVarargs.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void varargNotLast() {
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/VarArgNotLast.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void varargValidLast() {
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/VarArgValidLast.jmm"));
+        TestUtils.noErrors(result);
+        System.out.println(result.getReports());
     }
 }

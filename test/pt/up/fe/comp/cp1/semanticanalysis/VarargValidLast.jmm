@@ -1,0 +1,7 @@
+class VarargValidLast {
+    public void validMethod(int a, int... nums) {
+    }
+
+    public static void main(String[] args) {
+    }
+}
