@@ -74,10 +74,16 @@ public class JmmSymbolTableBuilder {
 
     private List<Symbol> buildFields(JmmNode classDecl) {
         List <Symbol> fields = new ArrayList<>();
+        List < String> names = new ArrayList<>();
         for(var field : classDecl.getChildren(VAR_DECL)){
             var name = field.get("name");
             var type = TypeUtils.convertType(field.getChild(0));
             var symbol = new Symbol(type,name);
+            if(names.contains(symbol.getName())){
+                var report = newError(field, "Duplicate field " + name);
+                reports.add(report);
+            }
+            names.add(symbol.getName());
             fields.add(symbol);
         }
 
@@ -110,9 +116,19 @@ public class JmmSymbolTableBuilder {
 
         for (var method : classDecl.getChildren(METHOD_DECL)) {
             var name = method.get("name");
+
             var params = method.getChildren(PARAM).stream()
                     .map(param -> new Symbol(TypeUtils.convertType(param.getChild(0)), param.get("name")))
                     .toList();
+
+            List<String> auxList = new ArrayList<>();
+            for(var param : params){
+                if(auxList.contains(param.getName())){
+                    var report = newError(method, "Repeated Params in " + method.get("name"));
+                    reports.add(report);
+                }
+                auxList.add(param.getName());
+            }
 
             map.put(name, params);
         }
@@ -130,6 +146,14 @@ public class JmmSymbolTableBuilder {
                     .map(varDecl -> new Symbol(TypeUtils.convertType(varDecl.getChild(0)), varDecl.get("name")))
                     .toList();
 
+            List<String> auxList = new ArrayList<>();
+            for(var local : locals){
+                if(auxList.contains(local.getName())){
+                    var report = newError(method, "Repeated locals in " + method.get("name"));
+                    reports.add(report);
+                }
+                auxList.add(local.getName());
+            }
 
             map.put(name, locals);
         }
@@ -139,9 +163,14 @@ public class JmmSymbolTableBuilder {
 
     private List<String> buildMethods(JmmNode classDecl) {
 
-        var methods = classDecl.getChildren(METHOD_DECL).stream()
-                .map(method -> method.get("name"))
-                .toList();
+        var methods = new ArrayList<String>();
+        for(var method : classDecl.getChildren(METHOD_DECL)){
+            if(methods.contains(method.get("name"))){
+                var report = newError(method, "Repeated method " + method.get("name"));
+                reports.add(report);
+            }
+            methods.add(method.get("name"));
+        }
 
         return methods;
     }

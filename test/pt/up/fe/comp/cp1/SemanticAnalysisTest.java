@@ -255,4 +255,32 @@ public class SemanticAnalysisTest {
         TestUtils.noErrors(result);
         System.out.println(result.getReports());
     }
+
+    @Test
+    public void repeatedMethods() {
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/RepeatedMethods.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void repeatedLocals() {
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/RepeatedLocals.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void repeatedParams() {
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/RepeatedParams.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void repeatedFields() {
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/RepeatedFields.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
 }
