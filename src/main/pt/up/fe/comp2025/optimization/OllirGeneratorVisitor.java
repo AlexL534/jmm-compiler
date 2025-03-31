@@ -6,6 +6,7 @@ import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp2025.ast.TypeUtils;
 
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static pt.up.fe.comp2025.ast.Kind.*;
@@ -49,7 +50,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         addVisit(RETURN_STMT, this::visitReturn);
         addVisit(ASSIGN_STMT, this::visitAssignStmt);
 
-//        setDefaultVisit(this::defaultVisit);
+       setDefaultVisit(this::defaultVisit);
     }
 
 
@@ -136,12 +137,23 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
 
         // params
         // TODO: Hardcoded for a single parameter, needs to be expanded
-        var paramsCode = visit(node.getChild(1));
-        code.append("(" + paramsCode + ")");
+        StringBuilder listParamsCode = new StringBuilder();
+        if(node.getNumChildren() > 0) {
+            var paramsNodes = node.getChildren(PARAM);
+            for (int i = 0; i < paramsNodes.size(); i++) {
+                var paramCode = visit(paramsNodes.get(i));
+                listParamsCode.append(paramCode);
+                if (i < paramsNodes.size() - 1) {
+                    listParamsCode.append(",");
+                }
+            }
+        }
+        code.append("(" + listParamsCode + ")");
 
         // type
         // TODO: Hardcoded for int, needs to be expanded
-        var retType = ".i32";
+        var returnType = table.getReturnType(node.get("name"));
+        var retType = ollirTypes.toOllirType(returnType);
         code.append(retType);
         code.append(L_BRACKET);
 
@@ -152,6 +164,11 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
                 .collect(Collectors.joining("\n   ", "   ", ""));
 
         code.append(stmtsCode);
+
+        var returnCode = node.getChildren(RETURN_STMT).stream()
+                        .map(this::visit)
+                                .collect(Collectors.joining("\n   ", "   ", ""));
+        code.append(returnCode);
         code.append(R_BRACKET);
         code.append(NL);
 
@@ -165,6 +182,11 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
 
         code.append(NL);
         code.append(table.getClassName());
+
+        String superClass = table.getSuper();
+        if(!superClass.isEmpty()) {
+            code.append(" extends ").append(superClass);
+        }
         
         code.append(L_BRACKET);
         code.append(NL);
