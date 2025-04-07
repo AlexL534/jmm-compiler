@@ -44,6 +44,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     protected void buildVisitor() {
 
         addVisit(PROGRAM, this::visitProgram);
+        addVisit(IMPORT_DECL, this::visitImport);
         addVisit(CLASS_DECL, this::visitClass);
         addVisit(METHOD_DECL, this::visitMethodDecl);
         addVisit(PARAM, this::visitParam);
@@ -53,10 +54,23 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
        setDefaultVisit(this::defaultVisit);
     }
 
+    private String visitImport(JmmNode node, Void unused){
+        StringBuilder importStmt = new StringBuilder();
+        importStmt.append("import ");
+
+        for(var importValue: table.getImports()) {
+            if(importValue.contains(node.get("ID"))){
+                importStmt.append(node.get("ID"));
+            }
+        }
+
+        return importStmt.toString() + SPACE + END_STMT;
+    }
+
 
     private String visitAssignStmt(JmmNode node, Void unused) {
 
-        var rhs = exprVisitor.visit(node.getChild(1));
+        var rhs = exprVisitor.visit(node.getChild(0));
 
         StringBuilder code = new StringBuilder();
 
@@ -65,10 +79,10 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
 
         // code to compute self
         // statement has type of lhs
-        var left = node.getChild(0);
+        var left = node;
         Type thisType = types.getExprType(left);
         String typeString = ollirTypes.toOllirType(thisType);
-        var varCode = left.get("name") + typeString;
+        var varCode = left.get("varName") + typeString;
 
 
         code.append(varCode);
