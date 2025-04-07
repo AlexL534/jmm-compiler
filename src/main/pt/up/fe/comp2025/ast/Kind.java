@@ -44,7 +44,8 @@ public enum Kind {
     METHOD_CALL,
     NEW_OBJECT,
     OBJECT_CREATION,
-    ID_TYPE;
+    ID_TYPE,
+    EXPR_STMT;
 
 
     private final String name;

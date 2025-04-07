@@ -29,6 +29,8 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     private final TypeUtils types;
     private final OptUtils ollirTypes;
 
+    private String currentMethod;
+
 
     private final OllirExprGeneratorVisitor exprVisitor;
 
@@ -50,8 +52,15 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         addVisit(PARAM, this::visitParam);
         addVisit(RETURN_STMT, this::visitReturn);
         addVisit(ASSIGN_STMT, this::visitAssignStmt);
+        addVisit(EXPR_STMT, this::visitExprStmt);
+        addVisit(METHOD_CALL, this::visitMethodCall);
 
-       setDefaultVisit(this::defaultVisit);
+       //setDefaultVisit(this::defaultVisit);
+    }
+
+    private String visitExprStmt(JmmNode node, Void unused) {
+        var childCode = visit(node.getChild(0));
+        return childCode + END_STMT;
     }
 
     private String visitImport(JmmNode node, Void unused){
@@ -150,6 +159,8 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         code.append(name);
 
         // params
+        exprVisitor.currentMethod = name;
+        currentMethod = name;
         // TODO: Hardcoded for a single parameter, needs to be expanded
         StringBuilder listParamsCode = new StringBuilder();
         if(node.getNumChildren() > 0) {
@@ -226,6 +237,40 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
                     invokespecial(this, "<init>").V;
                 }
                 """.formatted(table.getClassName());
+    }
+
+    private String visitMethodCall(JmmNode node, Void unused) {
+        types.setCurrentMethod(currentMethod);
+
+
+        String methodName = node.get("name");
+        var firstChildType = types.getExprType(node.getChild(0)).getName();
+        StringBuilder methodCall = new StringBuilder();
+        if(firstChildType.equals(table.getClassName())){
+            methodCall.append("invokevirtual(this.").append(table.getClassName()).append(", \"").append(methodName).append("\", ");
+        }
+        else{
+            methodCall.append("invokestatic(").append(firstChildType).append(", \"").append(methodName).append("\", ");
+        }
+        StringBuilder args = new StringBuilder();
+        for (int i = 1; i < node.getChildren().size(); i++ ) {
+            JmmNode child = node.getChildren().get(i);
+            Type nodeType = types.getExprType(child);
+            String ollirType = ollirTypes.toOllirType(nodeType);
+            args.append(child.get("name"));
+            args.append(ollirType);
+            if(i < node.getChildren().size() - 2) {
+                args.append(", ");
+            }
+        }
+        methodCall.append(args);
+        methodCall.append(")");
+        String returnType = ".V";
+        if(firstChildType.equals(table.getClassName())) {
+            returnType = ollirTypes.toOllirType(table.getReturnType(methodName));
+        }
+        methodCall.append(returnType);
+        return methodCall.toString();
     }
 
 

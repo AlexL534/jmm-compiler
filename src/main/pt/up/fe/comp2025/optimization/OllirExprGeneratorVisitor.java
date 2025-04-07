@@ -22,6 +22,8 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
     private final TypeUtils types;
     private final OptUtils ollirTypes;
 
+    public String currentMethod; //used to get the current method that is being visited
+
 
     public OllirExprGeneratorVisitor(SymbolTable table) {
         this.table = table;
@@ -35,15 +37,27 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         addVisit(VAR_REF_EXPR, this::visitVarRef);
         addVisit(BINARY_EXPR, this::visitBinExpr);
         addVisit(INTEGER_LITERAL, this::visitInteger);
+        addVisit(BOOLEAN_LITERAL, this::visitBoolean);
 
-//        setDefaultVisit(this::defaultVisit);
+        //setDefaultVisit(this::defaultVisit);
     }
+
+
+
+
 
 
     private OllirExprResult visitInteger(JmmNode node, Void unused) {
         var intType = TypeUtils.newIntType();
         String ollirIntType = ollirTypes.toOllirType(intType);
         String code = node.get("value") + ollirIntType;
+        return new OllirExprResult(code);
+    }
+
+    private OllirExprResult visitBoolean(JmmNode node, Void unused) {
+        var booleanType = TypeUtils.newBooleanType();
+        String ollirBooleanType = ollirTypes.toOllirType(booleanType);
+        String code = node.get("value") + ollirBooleanType;
         return new OllirExprResult(code);
     }
 
@@ -60,6 +74,7 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         computation.append(rhs.getComputation());
 
         // code to compute self
+        types.setCurrentMethod(currentMethod);
         Type resType = types.getExprType(node);
         String resOllirType = ollirTypes.toOllirType(resType);
         String code = ollirTypes.nextTemp() + resOllirType;
@@ -79,6 +94,7 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
     private OllirExprResult visitVarRef(JmmNode node, Void unused) {
 
         var id = node.get("name");
+        types.setCurrentMethod(currentMethod);
         Type type = types.getExprType(node);
         String ollirType = ollirTypes.toOllirType(type);
 
