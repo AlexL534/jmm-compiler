@@ -54,8 +54,9 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         addVisit(ASSIGN_STMT, this::visitAssignStmt);
         addVisit(EXPR_STMT, this::visitExprStmt);
         addVisit(METHOD_CALL, this::visitMethodCall);
+        addVisit(IF_STMT, this::visitIfStmt);
 
-       //setDefaultVisit(this::defaultVisit);
+        setDefaultVisit(this::defaultVisit);
     }
 
     private String visitExprStmt(JmmNode node, Void unused) {
@@ -273,6 +274,48 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         return methodCall.toString();
     }
 
+    private String visitIfStmt(JmmNode node, Void unused) {
+        StringBuilder code = new StringBuilder();
+        
+        // Generate labels for if branches
+        String ifEndLabel = "if_end_" + ollirTypes.nextTemp("if");
+        String elseLabel = "else_" + ollirTypes.nextTemp("else");
+        
+        // Get the condition expression
+        JmmNode conditionNode = node.getChild(0);
+        var conditionResult = exprVisitor.visit(conditionNode);
+        
+        // Add computation code for the condition
+        code.append(conditionResult.getComputation());
+        
+        // Generate if condition check
+        code.append("if (" + conditionResult.getCode() + ") goto " + elseLabel + END_STMT);
+        
+        // Generate then branch (first child is condition, second is THEN block)
+        if (node.getNumChildren() > 1) {
+            JmmNode thenNode = node.getChild(1);
+            String thenCode = visit(thenNode);
+            code.append(thenCode);
+        }
+        
+        // Jump to end after then branch
+        code.append("goto " + ifEndLabel + END_STMT);
+        
+        // Else label
+        code.append(elseLabel + ":" + NL);
+        
+        // Generate else branch if it exists (third child is ELSE block)
+        if (node.getNumChildren() > 2) {
+            JmmNode elseNode = node.getChild(2);
+            String elseCode = visit(elseNode);
+            code.append(elseCode);
+        }
+        
+        // End if label
+        code.append(ifEndLabel + ":" + NL);
+        
+        return code.toString();
+    }
 
     private String visitProgram(JmmNode node, Void unused) {
 
