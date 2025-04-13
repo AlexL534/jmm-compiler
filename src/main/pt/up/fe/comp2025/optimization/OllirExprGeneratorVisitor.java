@@ -38,13 +38,33 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         addVisit(BINARY_EXPR, this::visitBinExpr);
         addVisit(INTEGER_LITERAL, this::visitInteger);
         addVisit(BOOLEAN_LITERAL, this::visitBoolean);
+        addVisit(ARRAY_CREATION, this::visitArrayCreation);
 
-        //setDefaultVisit(this::defaultVisit);
+        setDefaultVisit(this::defaultVisit);
     }
 
-
-
-
+    private OllirExprResult visitArrayCreation(JmmNode node, Void unused) {
+        // Handle array creation expression
+        // Get the size expression from the first child
+        var sizeExpr = visit(node.getChild(0));
+        
+        StringBuilder computation = new StringBuilder();
+        
+        // Add the computation for the array size
+        computation.append(sizeExpr.getComputation());
+        
+        // Create a new temporary variable for the array
+        String arrayType = ".array.i32";
+        String tempVar = ollirTypes.nextTemp() + arrayType;
+        
+        // Generate the OLLIR code for array creation
+        computation.append(tempVar).append(SPACE)
+                  .append(ASSIGN).append(arrayType).append(SPACE)
+                  .append("new(array, ").append(sizeExpr.getCode()).append(")").append(arrayType)
+                  .append(END_STMT);
+        
+        return new OllirExprResult(tempVar, computation);
+    }
 
 
     private OllirExprResult visitInteger(JmmNode node, Void unused) {

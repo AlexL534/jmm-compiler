@@ -56,6 +56,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         addVisit(METHOD_CALL, this::visitMethodCall);
         addVisit(IF_STMT, this::visitIfStmt);
         addVisit(WHILE_STMT, this::visitWhileStmt);
+        addVisit(ARRAY_CREATION, this::visitArrayCreation);
 
         setDefaultVisit(this::defaultVisit);
     }
@@ -78,9 +79,17 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         return importStmt.toString() + SPACE + END_STMT;
     }
 
+    private String visitArrayCreation(JmmNode node, Void unused) {
+        // This is just in case the array creation is used as a statement on its own
+        // Usually it will be handled by OllirExprGeneratorVisitor
+        var arrExpr = exprVisitor.visit(node);
+        return arrExpr.getComputation();
+    }
 
     private String visitAssignStmt(JmmNode node, Void unused) {
-
+        // Set the current method in the expression visitor
+        exprVisitor.currentMethod = this.currentMethod;
+        
         var rhs = exprVisitor.visit(node.getChild(0));
 
         StringBuilder code = new StringBuilder();
@@ -91,6 +100,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         // code to compute self
         // statement has type of lhs
         var left = node;
+        types.setCurrentMethod(currentMethod);
         Type thisType = types.getExprType(left);
         String typeString = ollirTypes.toOllirType(thisType);
         var varCode = left.get("varName") + typeString;
@@ -112,15 +122,15 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
 
 
     private String visitReturn(JmmNode node, Void unused) {
-        // TODO: Hardcoded for int type, needs to be expanded
-        Type retType = TypeUtils.newIntType();
-
+        // Get the actual return type from the symbol table
+        Type retType = table.getReturnType(currentMethod);
 
         StringBuilder code = new StringBuilder();
 
-
+        // Set the current method in the expression visitor
+        exprVisitor.currentMethod = this.currentMethod;
+        
         var expr = node.getNumChildren() > 0 ? exprVisitor.visit(node.getChild(0)) : OllirExprResult.EMPTY;
-
 
         code.append(expr.getComputation());
         code.append("ret");
@@ -163,7 +173,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         // params
         exprVisitor.currentMethod = name;
         currentMethod = name;
-        // TODO: Hardcoded for a single parameter, needs to be expanded
+        
         StringBuilder listParamsCode = new StringBuilder();
         if(node.getNumChildren() > 0) {
             var paramsNodes = node.getChildren(PARAM);
@@ -177,13 +187,11 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         }
         code.append("(" + listParamsCode + ")");
 
-        // type
-        // TODO: Hardcoded for int, needs to be expanded
+        // return type
         var returnType = table.getReturnType(node.get("name"));
         var retType = ollirTypes.toOllirType(returnType);
         code.append(retType);
         code.append(L_BRACKET);
-
 
         // rest of its children stmts
         var stmtsCode = node.getChildren(STMT).stream()
