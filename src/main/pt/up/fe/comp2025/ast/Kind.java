@@ -45,6 +45,7 @@ public enum Kind {
     NEW_OBJECT,
     OBJECT_CREATION,
     ID_TYPE,
+    BLOCK_STMT,
     EXPR_STMT;
 
 
