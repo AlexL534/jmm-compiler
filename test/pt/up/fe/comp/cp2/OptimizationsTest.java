@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+
 public class OptimizationsTest {
     private static final String BASE_PATH = "pt/up/fe/comp/cp2/optimizations/";
 

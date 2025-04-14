@@ -4,6 +4,7 @@ import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.ast.PreorderJmmVisitor;
+import pt.up.fe.comp2025.ast.Kind;
 import pt.up.fe.comp2025.ast.TypeUtils;
 
 import static pt.up.fe.comp2025.ast.Kind.*;
@@ -40,6 +41,8 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         addVisit(BOOLEAN_LITERAL, this::visitBoolean);
         addVisit(ARRAY_CREATION, this::visitArrayCreation);
         addVisit(ARRAY_LENGTH, this::visitArrayLength);
+        addVisit(ARRAY_SUBSCRIPT, this::visitArraySubscript);
+        addVisit(METHOD_CALL, this::visitMethodCall);
 
         setDefaultVisit(this::defaultVisit);
     }
@@ -83,6 +86,98 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
 
         return new OllirExprResult(tempVar, computation);
     }
+
+    private OllirExprResult visitArraySubscript(JmmNode node, Void unused) {
+        //get the code of the original type
+        var arrayReference = visit(node.getChild(0));
+
+        //get the code of the expression inside the subscript
+        var subscriptExpr = visit(node.getChild(1));
+
+        // Create a new temporary variable for the array subscript
+        String arrType = ".i32";
+        String tempVar = ollirTypes.nextTemp() + arrType;
+
+        StringBuilder computation = new StringBuilder();
+        computation.append(subscriptExpr.getComputation());
+
+        computation.append(tempVar).append(SPACE)
+                .append(ASSIGN).append(arrType).append(SPACE)
+                .append(arrayReference.getCode()).append("[")
+                .append(subscriptExpr.getCode()).append("]").append(arrType).append(END_STMT);
+
+
+        return new OllirExprResult(tempVar, computation);
+    }
+
+    private OllirExprResult visitMethodCall(JmmNode node, Void unused) {
+        //method call used when it is used inside expressions (some code is the same as in the normal ollir generator visitor)
+        String funcType = ".i32";
+        String tempVar = ollirTypes.nextTemp() + funcType;
+        types.setCurrentMethod(currentMethod);
+
+        String methodName = node.get("name");
+        var firstChildType = types.getExprType(node.getChild(0)).getName();
+        StringBuilder methodCall = new StringBuilder();
+        if(firstChildType.equals(table.getClassName())){
+            methodCall.append("invokevirtual(this.").append(table.getClassName()).append(", \"").append(methodName).append("\", ");
+        }
+        else{
+            String methodObject = "";
+            for(var imp : table.getImports()){
+                if(imp.equals(node.getChild(0).get("name"))){
+                    methodObject = imp;
+                }
+            }
+            methodCall.append("invokestatic(").append(methodObject).append(", \"").append(methodName).append("\", ");
+        }
+        StringBuilder args = new StringBuilder();
+        for (int i = 1; i < node.getChildren().size(); i++ ) {
+            JmmNode child = node.getChildren().get(i);
+            Type nodeType = types.getExprType(child);
+            String ollirType = ollirTypes.toOllirType(nodeType);
+            var kind = child.getKind();
+
+            if(Kind.fromString(kind).equals(INTEGER_LITERAL) || Kind.fromString(kind).equals(BOOLEAN_LITERAL)) {
+                args.append(child.get("value"));
+            }
+            else if (Kind.fromString(kind).equals(VAR_REF_EXPR)) {
+                var result = visit(child);
+                args.append(result.getCode());
+            }
+            else{
+                //in this case, we need to visit the node that wil create a temporary variable and then insert that temporary variable into the method call
+                var result = visit(child);
+                methodCall = new StringBuilder(result.getComputation() + methodCall.toString());
+                methodCall.append(result.getCode());
+            }
+
+            args.append(ollirType);
+            if(i < node.getChildren().size() - 2) {
+                args.append(", ");
+            }
+        }
+        methodCall.append(args);
+        methodCall.append(")");
+        String returnType = ".V";
+        if(firstChildType.equals(table.getClassName())) {
+            returnType = ollirTypes.toOllirType(table.getReturnType(methodName));
+        }
+        methodCall.append(returnType);
+
+
+        //create the computation
+        StringBuilder computation = new StringBuilder();
+
+        computation.append(tempVar).append(SPACE)
+                .append(ASSIGN).append(funcType).append(SPACE)
+                .append(methodCall.toString())
+                .append(END_STMT);
+
+        return new OllirExprResult(tempVar, computation);
+    }
+
+
 
 
     private OllirExprResult visitInteger(JmmNode node, Void unused) {
