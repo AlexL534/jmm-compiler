@@ -292,12 +292,21 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
             Type nodeType = types.getExprType(child);
             String ollirType = ollirTypes.toOllirType(nodeType);
             var kind = child.getKind();
+
             if(Kind.fromString(kind).equals(INTEGER_LITERAL) || Kind.fromString(kind).equals(BOOLEAN_LITERAL)) {
                 args.append(child.get("value"));
             }
-            else {
-                args.append(child.get("name"));
+            else if (Kind.fromString(kind).equals(VAR_REF_EXPR)) {
+                var result = exprVisitor.visit(child);
+                args.append(result.getCode());
             }
+            else{
+                //in this case, we need to visit the node that wil create a temporary variable and then insert that temporary variable into the method call
+                var result = exprVisitor.visit(child);
+                methodCall = new StringBuilder(result.getComputation() + methodCall.toString());
+                methodCall.append(result.getCode());
+            }
+
             args.append(ollirType);
             if(i < node.getChildren().size() - 2) {
                 args.append(", ");

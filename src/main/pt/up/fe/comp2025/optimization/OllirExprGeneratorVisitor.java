@@ -39,6 +39,7 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         addVisit(INTEGER_LITERAL, this::visitInteger);
         addVisit(BOOLEAN_LITERAL, this::visitBoolean);
         addVisit(ARRAY_CREATION, this::visitArrayCreation);
+        addVisit(ARRAY_LENGTH, this::visitArrayLength);
 
         setDefaultVisit(this::defaultVisit);
     }
@@ -63,6 +64,23 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
                   .append("new(array, ").append(sizeExpr.getCode()).append(")").append(arrayType)
                   .append(END_STMT);
         
+        return new OllirExprResult(tempVar, computation);
+    }
+    private OllirExprResult visitArrayLength(JmmNode node, Void unused) {
+        //get the code of the original type
+        var arrayReference = visit(node.getChild(0));
+
+        // Create a new temporary variable for the array length
+        String lenType = ".i32";
+        String tempVar = ollirTypes.nextTemp() + lenType;
+
+        StringBuilder computation = new StringBuilder();
+
+        computation.append(tempVar).append(SPACE)
+                .append(ASSIGN).append(lenType).append(SPACE)
+                .append("arraylength( ").append(arrayReference.getCode()).append(")").append(lenType)
+                .append(END_STMT);
+
         return new OllirExprResult(tempVar, computation);
     }
 

@@ -23,6 +23,10 @@ public class OptUtils {
         this.temporaries = new AccumulatorMap<>();
     }
 
+    public String getCurrentTemp(String prefix){
+        return prefix + (temporaries.getCount(prefix) - 1);
+    }
+
 
     public String nextTemp() {
 
