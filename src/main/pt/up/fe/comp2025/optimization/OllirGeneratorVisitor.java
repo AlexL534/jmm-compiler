@@ -129,6 +129,27 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
 
         StringBuilder code = new StringBuilder();
 
+        if (node.getChild(0).getKind().equals(NEW_OBJECT.getNodeName()) ||
+                node.getChild(0).getKind().equals(OBJECT_CREATION.getNodeName())) {
+
+            String className = types.getExprType(node.getChild(0)).getName();
+            String tempVar = "tmp" + ollirTypes.nextTemp("obj") + "." + className;
+            String varName = node.get("varName") + "." + className;
+
+            code.append(tempVar).append(" :=.").append(className)
+                    .append(" new(").append(className).append(").").append(className)
+                    .append(END_STMT);
+
+            code.append("invokespecial(").append(tempVar).append(", \"<init>\").V")
+                    .append(END_STMT);
+
+            code.append(varName).append(" :=.").append(className)
+                    .append(" ").append(tempVar)
+                    .append(END_STMT);
+
+            return code.toString();
+        }
+
         // code to compute the children
         code.append(rhs.getComputation());
 
