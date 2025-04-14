@@ -99,13 +99,15 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         String tempVar = ollirTypes.nextTemp() + arrType;
 
         StringBuilder computation = new StringBuilder();
+
+        computation.append(arrayReference.getComputation());
         computation.append(subscriptExpr.getComputation());
 
         computation.append(tempVar).append(SPACE)
                 .append(ASSIGN).append(arrType).append(SPACE)
                 .append(arrayReference.getCode()).append("[")
-                .append(subscriptExpr.getCode()).append("]").append(arrType).append(END_STMT);
-
+                .append(subscriptExpr.getCode()).append("]").append(arrType)
+                .append(END_STMT);
 
         return new OllirExprResult(tempVar, computation);
     }
@@ -176,9 +178,6 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
 
         return new OllirExprResult(tempVar, computation);
     }
-
-
-
 
     private OllirExprResult visitInteger(JmmNode node, Void unused) {
         var intType = TypeUtils.newIntType();
