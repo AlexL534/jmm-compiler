@@ -30,32 +30,76 @@ public class ArgumentCheck extends AnalysisVisitor {
 
         var imps = table.getImports();
 
-        //if the method called is from an import
-        var firstChildType = utils.getExprType(node.getChild(0)).getName();
-        if(imps.contains(firstChildType)) {
-            return null;
-        }
-        //assume that the method belongs to the super class
-        if(imps.contains(table.getSuper()) && (firstChildType.equals(table.getClassName())) && (!table.getMethods().contains(node.get("name")))) {
-            return null;
+        // First check if this is a method call on an object from an imported class
+        if (node.getNumChildren() > 0) {
+            JmmNode firstChild = node.getChild(0);
+            Type firstChildType = utils.getExprType(firstChild);
+            
+            // If the object we're calling the method on is an imported type or
+            // is itself an import identifier, we assume the method exists
+            if (firstChildType != null) {
+                String typeName = firstChildType.getName();
+                if (imps.contains(typeName) || 
+                    imps.stream().anyMatch(imp -> imp.endsWith("." + typeName))) {
+                    return null; // Assume methods on imported types are valid
+                }
+            }
+            
+            // If the caller is a variable reference that matches an import name
+            if (firstChild.getKind().equals(Kind.VAR_REF_EXPR.getNodeName())) {
+                String varName = firstChild.get("name");
+                if (imps.contains(varName) || 
+                    imps.stream().anyMatch(imp -> imp.endsWith("." + varName))) {
+                    return null; // Direct import reference like io.print()
+                }
+            }
+            
+            // Handle this.method() calls
+            if (firstChild.getKind().equals(Kind.THIS_EXPR.getNodeName())) {
+                // If we're calling a method on 'this', check if the method exists in this class
+                if (table.getMethods().contains(node.get("name"))) {
+                    // Method exists in this class, validate arguments
+                    validateMethodArguments(node, table, utils);
+                    return null;
+                }
+                // If method doesn't exist in this class, check if it might be in superclass
+                if (!table.getSuper().isEmpty()) {
+                    return null; // Assume it's defined in superclass
+                }
+            }
+
+            //assume that the method belongs to the super class
+            if (!table.getSuper().isEmpty() && 
+                (firstChildType != null && firstChildType.getName().equals(table.getClassName())) && 
+                (!table.getMethods().contains(node.get("name")))) {
+                return null;
+            }
         }
 
-        Type childType = null;
+        // If we got here, it's a method call on this class, so validate it
+        validateMethodArguments(node, table, utils);
+        return null;
+    }
+    
+    private void validateMethodArguments(JmmNode node, SymbolTable table, TypeUtils utils) {
         var arguments = table.getParameters(node.get("name"));
 
-        if(arguments == null){
+        if (arguments == null) {
             Report report = Report.newError(
                     Stage.SEMANTIC,
                     node.getLine(),
                     node.getColumn(),
-                    "Method" + node.get("name") + "does not exist",
+                    "Method " + node.get("name") + " does not exist",
                     null
             );
             addReport(report);
-            return null;
+            return;
         }
-        if((arguments.size() != node.getChildren().size() - 1) && (!arguments.getLast().getType().getName().equals("int vararg"))) {
-            String message = "Wrong number of arguments: " + (node.getChildren().size() - 1) + ". Expected:" + arguments.size();
+        
+        // Check number of arguments (unless last parameter is a vararg)
+        if ((arguments.size() != node.getChildren().size() - 1) && 
+            (arguments.isEmpty() || !arguments.getLast().getType().getName().equals("int vararg"))) {
+            String message = "Wrong number of arguments: " + (node.getChildren().size() - 1) + ". Expected: " + arguments.size();
             Report report = Report.newError(
                     Stage.SEMANTIC,
                     node.getLine(),
@@ -64,17 +108,19 @@ public class ArgumentCheck extends AnalysisVisitor {
                     null
             );
             addReport(report);
-
-            return null;
+            return;
         }
 
+        // Validate argument types
         for (int i = 1; i < node.getChildren().size(); i++) {
             var child = node.getChild(i);
-            childType = utils.getExprType(child);
-            Symbol argType = null;
-
-            //check if i is bigger than the argument list (only useful in argvars)
-            if(arguments.size() <= i) {
+            Type childType = utils.getExprType(child);
+            if (childType == null) continue; // Skip if we can't determine type
+            
+            Symbol argType;
+            //check if i is bigger than the argument list (only useful in varargs)
+            if (arguments.size() <= i) {
+                // For varargs, use the last parameter
                 argType = arguments.getLast();
             }
             else {
@@ -82,12 +128,15 @@ public class ArgumentCheck extends AnalysisVisitor {
             }
 
             //ignore if the parameter is vararg and the arguments passed are int
-            if(childType.getName().equals("int") && !childType.isArray() && argType.getType().getName().equals("int vararg")) {
+            if (childType.getName().equals("int") && !childType.isArray() && 
+                argType.getType().getName().equals("int vararg")) {
                 continue;
             }
 
-            if(!childType.getName().equals(argType.getType().getName()) || childType.isArray() != argType.getType().isArray()) {
-                String message = String.format("Invalid argument type: %s and %s", childType.getName(), argType.getType().getName());
+            if (!childType.getName().equals(argType.getType().getName()) || 
+                childType.isArray() != argType.getType().isArray()) {
+                String message = String.format("Invalid argument type: %s and %s", 
+                                               childType.getName(), argType.getType().getName());
                 Report report = Report.newError(
                         Stage.SEMANTIC,
                         node.getLine(),
@@ -98,7 +147,5 @@ public class ArgumentCheck extends AnalysisVisitor {
                 addReport(report);
             }
         }
-
-        return null;
     }
 }
