@@ -283,4 +283,11 @@ public class SemanticAnalysisTest {
         TestUtils.mustFail(result);
         System.out.println(result.getReports());
     }
+
+    @Test
+    public void fieldNamedMain() {
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/FieldNamedMain.jmm"));
+        TestUtils.noErrors(result);
+        System.out.println(result.getReports());
+    }
 }
