@@ -35,8 +35,9 @@ public class JmmAnalysisImpl implements JmmAnalysis {
         var returnStmt = new ReturnStmt();
         var assignmentCheck = new AssignmentCheck();
         var argumentCheck = new ArgumentCheck();
+        var importCheck = new ImportCheck();
 
-        return List.of(undeclaredVariableCheck, invalidOperationCheck, controlflowtypecheck, arrayoperationcheck, returnStmt, assignmentCheck, argumentCheck);
+        return List.of(undeclaredVariableCheck, invalidOperationCheck, controlflowtypecheck, arrayoperationcheck, returnStmt, assignmentCheck, argumentCheck, importCheck);
     }
 
     @Override

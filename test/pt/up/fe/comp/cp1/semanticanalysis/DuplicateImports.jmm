@@ -1,0 +1,7 @@
+import java.util.List;
+import java.util.List;
+
+class DuplicateImports {
+
+    public static void main(String[] args) {}
+}
