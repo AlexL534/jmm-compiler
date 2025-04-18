@@ -31,15 +31,15 @@ public class ArrayOperationCheck extends AnalysisVisitor {
 
         TypeUtils utils = new TypeUtils(table);
         utils.setCurrentMethod(currentMethod);
-        
+
         for (JmmNode element : arrayLiteral.getChildren()) {
             Type type = utils.getExprType(element);
             String elementType = type.getName();
-            
+
             if (!elementType.equals(expectedType)) {
                 String message = "Array literals must have consistent element types. " +
                                 "Found " + elementType + " but expected " + expectedType;
-                
+
                 addReport(Report.newError(
                     Stage.SEMANTIC,
                     element.getLine(),
@@ -49,7 +49,7 @@ public class ArrayOperationCheck extends AnalysisVisitor {
                 ));
             }
         }
-        
+
         return null;
     }
 
@@ -58,7 +58,7 @@ public class ArrayOperationCheck extends AnalysisVisitor {
         JmmNode arrayExpr = arrayAccess.getChildren().get(0);
         // Second child is the index expression
         JmmNode indexExpr = arrayAccess.getChildren().get(1);
-        
+
         checkArrayAccess(arrayExpr, indexExpr, table);
         return null;
     }
@@ -81,10 +81,10 @@ public class ArrayOperationCheck extends AnalysisVisitor {
             return;
         }
         String arrayType = type.getName();
-        
+
         if (!type.isArray()) {
             String message = "Array access performed on non-array type: " + arrayType;
-            
+
             addReport(Report.newError(
                 Stage.SEMANTIC,
                 arrayExpr.getLine(),
@@ -93,7 +93,7 @@ public class ArrayOperationCheck extends AnalysisVisitor {
                 null
             ));
         }
-        
+
         // Check that the index is an integer
         type = utils.getExprType(indexExpr);
 
@@ -108,10 +108,10 @@ public class ArrayOperationCheck extends AnalysisVisitor {
             return;
         }
         String indexType = type.getName();
-        
+
         if (!indexType.equals("int")) {
             String message = "Array index must be an integer, found: " + indexType;
-            
+
             addReport(Report.newError(
                 Stage.SEMANTIC,
                 indexExpr.getLine(),
@@ -121,5 +121,4 @@ public class ArrayOperationCheck extends AnalysisVisitor {
             ));
         }
     }
-
 }

@@ -339,4 +339,18 @@ public class SemanticAnalysisTest {
         TestUtils.noErrors(result);
         System.out.println(result.getReports());
     }
+
+    @Test
+    public void intArrayTest() {
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/IntArrayTest.jmm"));
+        TestUtils.noErrors(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void invalidIntArrayTest() {
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/InvalidIntArrayTest.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
 }
