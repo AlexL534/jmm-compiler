@@ -127,6 +127,12 @@ public class ArgumentCheck extends AnalysisVisitor {
                 argType = arguments.get(i - 1);
             }
 
+            // Special case for int[] passed to int vararg
+            if (childType.getName().equals("int") && childType.isArray() &&
+                    argType.getType().getName().equals("int vararg")) {
+                continue;
+            }
+
             //ignore if the parameter is vararg and the arguments passed are int
             if (childType.getName().equals("int") && !childType.isArray() && 
                 argType.getType().getName().equals("int vararg")) {
