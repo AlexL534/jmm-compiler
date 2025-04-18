@@ -1,0 +1,4 @@
+class ValidMain {
+    public static void main(String[] args) {
+    }
+}

@@ -1,0 +1,3 @@
+class MainWithoutParams {
+    public static void main() {}
+}
