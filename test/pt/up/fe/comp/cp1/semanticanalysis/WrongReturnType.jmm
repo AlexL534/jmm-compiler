@@ -1,0 +1,12 @@
+class WrongReturnType1 {
+    public int getNumber() {
+        return true; // should give error
+    }
+
+    public static void main(String[] args) {
+        WrongReturnType1 obj;
+        int x;
+        obj = new WrongReturnType1();
+        x = obj.getNumber();
+    }
+}

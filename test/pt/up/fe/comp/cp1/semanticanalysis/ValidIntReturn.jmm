@@ -1,0 +1,10 @@
+class ValidIntReturn {
+    public int getNumber() {
+        return 42;
+    }
+
+    public static void main(String[] args) {
+        int num;
+        num = new ValidIntReturn().getNumber();
+    }
+}

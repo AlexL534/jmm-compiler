@@ -1,0 +1,15 @@
+class MissingIntReturn {
+    public int calculateSum(int a, int b) {
+        int result;
+        result = a + b;
+        // no return
+    }
+
+    public static void main(String[] args) {
+        MissingIntReturn obj;
+        int sum;
+
+        obj = new MissingIntReturn();
+        sum = obj.calculateSum(10, 20);
+    }
+}
