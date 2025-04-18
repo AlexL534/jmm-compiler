@@ -4,7 +4,9 @@ class VarargValidLast {
     }
 
     public static void main(String[] args) {
-        VarargValidLast obj = new VarargValidLast();
-        int result = obj.validMethod(5, 1, 2, 3);
+        VarargValidLast obj;
+        int result;
+        obj = new VarargValidLast();
+        result = obj.validMethod(5, new int[3]);
     }
 }

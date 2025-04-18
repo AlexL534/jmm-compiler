@@ -1,10 +1,13 @@
 class MultipleVarargs {
     public int invalidMethod(int... nums1, int... nums2) {
-        return nums1.length + nums2.length;
+        return 0;
     }
 
     public static void main(String[] args) {
-        MultipleVarargs obj = new MultipleVarargs();
-        int result = obj.invalidMethod(new int[]{1, 2}, new int[]{3, 4});
+        MultipleVarargs obj;
+        int result;
+
+        obj = new MultipleVarargs();
+        result = obj.invalidMethod(1, 2);
     }
 }

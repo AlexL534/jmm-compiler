@@ -1,0 +1,6 @@
+class MissingImport {
+    public static void main(String[] args) {
+        MyExternalClass obj;
+        obj = new MyExternalClass();
+    }
+}

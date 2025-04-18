@@ -23,7 +23,6 @@ public class ImportCheck extends AnalysisVisitor {
     }
 
 
-
     private Void visitImportDecl(JmmNode importDecl, SymbolTable table) {
         List<String> imports = table.getImports();
         Set<String> seen = new HashSet<>();

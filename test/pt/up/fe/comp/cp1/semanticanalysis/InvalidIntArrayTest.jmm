@@ -1,7 +1,10 @@
 class InvalidIntArrayTest {
     public static void main(String[] args) {
-        int[] numbers = new int[10];
-        boolean b = true;
+        int[] numbers;
+        boolean b;
+
+        numbers = new int[3];
+        b = true;
 
         numbers[0] = b; //should fail, assign boolean to int[]
     }
