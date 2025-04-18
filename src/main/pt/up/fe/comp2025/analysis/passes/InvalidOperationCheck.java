@@ -92,7 +92,7 @@ public class InvalidOperationCheck extends AnalysisVisitor {
 
         
         if (!isOperationValid(op, leftTypeName, rightTypeName,isArrayLeft,isArrayRight  )) {
-            String message = String.format("Invalid operation: %s between %s and %s", op, leftTypeName, rightTypeName);
+            String  message = String.format("Invalid operation: %s between %s and %s", op, leftTypeName, rightTypeName);
             
             Report report = Report.newError(
                 Stage.SEMANTIC,

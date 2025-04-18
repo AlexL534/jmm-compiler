@@ -18,6 +18,8 @@ public class ArrayOperationCheck extends AnalysisVisitor {
         addVisit(Kind.METHOD_DECL, this::visitMethodDecl);
         addVisit(ARRAY_SUBSCRIPT, this::visitArrayAccess);
         addVisit(ARRAY_LITERAL, this::visitArrayLiteral);
+        addVisit(ASSIGN_STMT, this::visitAssignment);
+        addVisit(ARRAY_ASSIGN_STMT, this::visitAssignment);
     }
 
     private Void visitMethodDecl(JmmNode method, SymbolTable table) {
@@ -120,5 +122,72 @@ public class ArrayOperationCheck extends AnalysisVisitor {
                 null
             ));
         }
+    }
+
+    private Void visitAssignment(JmmNode node, SymbolTable table) {
+        TypeUtils utils = new TypeUtils(table);
+        utils.setCurrentMethod(currentMethod);
+        
+        // Check if we have enough children for an assignment
+        if (node.getNumChildren() < 2) {
+            return null;
+        }
+        
+        JmmNode leftNode = node.getChildren().get(0);
+        JmmNode rightNode = node.getChildren().get(1);
+        
+        // Case 1: Array assignment statement (ARRAY_ASSIGN_STMT)
+        // Direct assignment to array element: array[index] = value
+        if (node.getKind().equals(ARRAY_ASSIGN_STMT.getNodeName())) {
+            Type valueType = utils.getExprType(rightNode);
+            
+            if (valueType != null && !valueType.getName().equals("int")) {
+                String message = String.format("Cannot assign %s to array element of type int", 
+                    valueType.getName());
+                
+                Report report = Report.newError(
+                    Stage.SEMANTIC,
+                    node.getLine(),
+                    node.getColumn(),
+                    message,
+                    null
+                );
+                
+                addReport(report);
+            }
+            return null;
+        }
+        
+        // Case 2: Regular assignment with array access on the left (ASSIGN_STMT)
+        // General assignment where left side might be an array access
+        if (leftNode.getKind().equals(ARRAY_SUBSCRIPT.getNodeName())) {
+            // Get the array type
+            JmmNode arrayExpr = leftNode.getChildren().get(0);
+            Type arrayType = utils.getExprType(arrayExpr);
+            
+            // Get the expression type
+            Type valueType = utils.getExprType(rightNode);
+            if (valueType == null) {
+                return null;
+            }
+            
+            // For arrays, elements are always int in this language
+            if (!valueType.getName().equals("int")) {
+                String message = String.format("Cannot assign %s to array element of type int", 
+                    valueType.getName());
+                
+                Report report = Report.newError(
+                    Stage.SEMANTIC,
+                    rightNode.getLine(),
+                    rightNode.getColumn(),
+                    message,
+                    null
+                );
+                
+                addReport(report);
+            }
+        }
+        
+        return null;
     }
 }
