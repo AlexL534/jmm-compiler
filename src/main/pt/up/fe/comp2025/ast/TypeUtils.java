@@ -37,7 +37,6 @@ public class TypeUtils {
 
     public static Type convertType(JmmNode typeNode) {
 
-        // TODO: When you support new types, this must be updated
         var name = typeNode.get("value");
         var isArray = typeNode.getKind().equals("ArrayType");
 
@@ -52,6 +51,21 @@ public class TypeUtils {
         return new Type(name, isArray);
     }
 
+    public boolean isValidType(Type type) {
+        var name = type.getName();
+        var isarray = type.isArray();
+        if(isarray) {
+            return name.equals("int");
+        }
+        else{
+            var imports = table.getImports();
+
+            return name.equals("int") || imports.contains(name) ||
+                    name.equals("boolean") || name.equals("String") ||
+                    name.equals(table.getClassName()) || name.equals(table.getSuper());
+        }
+    }
+
 
     /**
      * Gets the {@link Type} of an arbitrary expression.
@@ -61,7 +75,7 @@ public class TypeUtils {
      */
     public Type getExprType(JmmNode expr) {
 
-        String type = "int";
+        String type = "unknown";
         boolean isArray = false;
 
         if(Kind.INTEGER_LITERAL.check(expr)){

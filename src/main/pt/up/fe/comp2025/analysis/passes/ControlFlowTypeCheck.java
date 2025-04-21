@@ -71,6 +71,17 @@ public class ControlFlowTypeCheck extends AnalysisVisitor {
         utils.setCurrentMethod(currentMethod);
 
         String type = utils.getExprType(condition).getName();//determineType(condition, table);
+
+        if(type.equals("unknown")){
+            Report report = Report.newError(
+                    Stage.SEMANTIC,
+                    condition.getLine(),
+                    condition.getColumn(),
+                    "Could not evaluate the expressions type of the assignment",
+                    null
+            );
+            addReport(report);
+        }
         
         // Key check - the condition must be a boolean expression
         if (!type.equals("boolean")) {

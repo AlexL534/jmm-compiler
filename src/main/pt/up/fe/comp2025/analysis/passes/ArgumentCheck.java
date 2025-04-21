@@ -75,6 +75,8 @@ public class ArgumentCheck extends AnalysisVisitor {
             JmmNode firstChild = node.getChild(0);
             Type firstChildType = utils.getExprType(firstChild);
 
+
+
             // If the object we're calling the method on is an imported type or
             // is itself an import identifier, we assume the method exists
             if (firstChildType != null) {

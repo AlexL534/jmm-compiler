@@ -67,11 +67,22 @@ public class AssignmentCheck extends AnalysisVisitor {
             }
         }
 
+        if(!utils.isValidType(new Type(typeVar, isArrayVar))){
+            Report report = Report.newError(
+                    Stage.SEMANTIC,
+                    node.getLine(),
+                    node.getColumn(),
+                    "Invalid Type: " + typeVar,
+                    null
+            );
+            addReport(report);
+        }
+
         //get The expression type
         JmmNode expr = node.getChild(0);
         Type exprType = utils.getExprType(expr);
 
-        if(exprType == null){
+        if(exprType.getName().equals("unknown")){
             Report report = Report.newError(
                     Stage.SEMANTIC,
                     node.getLine(),
@@ -79,6 +90,7 @@ public class AssignmentCheck extends AnalysisVisitor {
                     "Could not evaluate the expressions type of the assignment",
                     null
             );
+            addReport(report);
         }
 
         //check if any of the types is imported (imported classes don't need type checking)
