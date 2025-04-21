@@ -62,6 +62,30 @@ public class JmmOptimizationImpl implements JmmOptimization {
     public OllirResult optimize(OllirResult ollirResult) {
         // Currently we're doing AST-based optimizations only
         // OLLIR-based optimizations would be implemented here
+
+        var config = ollirResult.getConfig();
+        if(!config.containsKey("registerAllocation")){
+            return ollirResult;
+        }
+        var registers = config.get("registerAllocation");
+        if(registers.equals("-1")){
+            //use the same ollir. No optimizations needed
+            return ollirResult;
+        }
+        var ollirClass =  ollirResult.getOllirClass();
+
+        //build the cfg
+        ollirClass.buildCFGs();
+
+        //TODO: liveness analysis
+        var dataFlow = new DataFlowAnalysis();
+        for(var method : ollirClass.getMethods()){
+            dataFlow.analyseMethod(method);
+        }
+
+        //TODO: Interference Graph
+        //TODO: Graph Coloring
+
         return ollirResult;
     }
 }
