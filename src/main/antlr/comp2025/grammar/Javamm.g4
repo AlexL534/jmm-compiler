@@ -81,6 +81,7 @@ expr
     | expr '.' 'length' #ArrayLength
     | 'new' INT '[' expr ']' #ArrayCreation
     | 'new' name=ID '(' ')' #ObjectCreation
+    | expr '[' expr ']' #ArraySubscript
     | expr '.' name=ID '(' (expr (',' expr)*)? ')' #MethodCall
     | expr '.' name=ID #FieldAccess
     | op='!' expr #UnaryOp
@@ -88,7 +89,6 @@ expr
     | expr op=('+' | '-') expr #BinaryExpr
     | expr op='<' expr #BinaryExpr
     | expr op = '&&' expr #BinaryExpr
-    | expr '[' expr ']' #ArraySubscript
     | '[' (expr (',' expr)*)? ']' #ArrayLiteral
     | 'this' #ThisExpr
     | value=INTEGER #IntegerLiteral
