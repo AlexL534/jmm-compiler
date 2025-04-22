@@ -88,6 +88,7 @@ public class JmmOptimizationImpl implements JmmOptimization {
         
         // Register allocation modifies the ClassUnit object within ollirResult directly
         // So we just need to return the original result with updated reports
+
         return ollirResult;
     }
 }
