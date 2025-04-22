@@ -10,6 +10,14 @@ apply plugin: 'java'
 java {
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
+    
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+tasks.withType(JavaCompile) {
+    options.release = 21
 }
 
 
@@ -41,6 +49,8 @@ dependencies {
     // https://mvnrepository.com/artifact/org.fusesource.jansi/jansi
     implementation 'org.fusesource.jansi:jansi:2.4.0'
 
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+
 }
 
 
@@ -67,7 +77,3 @@ application {
     mainClass = 'pt.up.fe.comp2025.Launcher'
 }
 
-
-dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-}

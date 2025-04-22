@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Run JUnit Tests",
+            "request": "launch",
+            "mainClass": "",
+            "projectName": "comp2025-12c",
+            "vmArgs": "--enable-preview"
+        },
+        {
+            "type": "java",
+            "name": "Run Current File",
+            "request": "launch",
+            "mainClass": "${file}"
+        }
+    ]
+}
