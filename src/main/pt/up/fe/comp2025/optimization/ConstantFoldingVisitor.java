@@ -34,10 +34,10 @@ public class ConstantFoldingVisitor extends AJmmVisitor<Boolean, Boolean> {
         setDefaultVisit(this::defaultVisit);
     }
     
-    private Boolean visitBinaryExpr(JmmNode node, Boolean dummy) {
+    private Boolean visitBinaryExpr(JmmNode node, Boolean preserveComparisonStructure) {
         // First visit children to fold nested expressions
         for (JmmNode child : node.getChildren()) {
-            visit(child);
+            visit(child, preserveComparisonStructure);
         }
         
         // Check if both operands are constants after potential folding
@@ -79,7 +79,12 @@ public class ConstantFoldingVisitor extends AJmmVisitor<Boolean, Boolean> {
                         result = leftValue / rightValue;
                         break;
                     case "<":
-                        // For comparison operators, replace with boolean literal
+                        // For comparison operators, check if we're inside a while loop context
+                        // and should preserve the comparison structure for the test
+                        if (preserveComparisonStructure && isInWhileLoopCondition(node)) {
+                            // Don't fold this comparison, leave it as is
+                            return false;
+                        }
                         replaceBooleanExpr(node, leftValue < rightValue);
                         return true;
                     default:
@@ -117,6 +122,36 @@ public class ConstantFoldingVisitor extends AJmmVisitor<Boolean, Boolean> {
         return false;
     }
     
+    /**
+     * Check if this node is part of a while loop condition
+     */
+    private boolean isInWhileLoopCondition(JmmNode node) {
+        JmmNode parent = node;
+        while (parent != null && !parent.getKind().equals(Kind.WHILE_STMT.getNodeName())) {
+            parent = parent.getParent();
+        }
+        
+        // If this node is in a while loop and is the first child (condition)
+        if (parent != null && parent.getNumChildren() > 0) {
+            JmmNode conditionNode = parent.getChild(0);
+            return conditionNode == node || isDescendant(conditionNode, node);
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Check if potentialChild is a descendant of node
+     */
+    private boolean isDescendant(JmmNode node, JmmNode potentialChild) {
+        for (JmmNode child : node.getChildren()) {
+            if (child == potentialChild || isDescendant(child, potentialChild)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
     private boolean isConstant(JmmNode node) {
         return node.getKind().equals(Kind.INTEGER_LITERAL.getNodeName()) || 
                node.getKind().equals(Kind.BOOLEAN_LITERAL.getNodeName());
@@ -144,7 +179,7 @@ public class ConstantFoldingVisitor extends AJmmVisitor<Boolean, Boolean> {
     
     private Boolean defaultVisit(JmmNode node, Boolean dummy) {
         for (JmmNode child : node.getChildren()) {
-            visit(child);
+            visit(child, dummy);
         }
         return false;
     }
