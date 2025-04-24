@@ -62,7 +62,7 @@ public class OptUtils {
             case "int" -> "i32";
             case "boolean" -> "bool";
             case "void" -> "V";
-            case "String" -> "array.String";
+            case "String" -> "String";
             default -> typeName;
         };
 
