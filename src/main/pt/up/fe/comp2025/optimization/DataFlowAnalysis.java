@@ -1,10 +1,7 @@
 package pt.up.fe.comp2025.optimization;
 
-import org.antlr.v4.runtime.misc.Pair;
 import org.specs.comp.ollir.*;
 import org.specs.comp.ollir.inst.*;
-
-import java.lang.annotation.ElementType;
 import java.util.*;
 
 public class DataFlowAnalysis {
