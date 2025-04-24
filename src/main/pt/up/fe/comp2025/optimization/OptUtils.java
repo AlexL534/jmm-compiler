@@ -59,7 +59,7 @@ public class OptUtils {
     private String toOllirType(String typeName) {
 
         String type = "." + switch (typeName) {
-            case "int" -> "i32";
+            case "int", "int vararg" -> "i32";
             case "boolean" -> "bool";
             case "void" -> "V";
             case "String" -> "String";

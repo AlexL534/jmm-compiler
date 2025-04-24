@@ -231,19 +231,24 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
 
         // name
         var name = node.get("name");
-        code.append(name);
 
         // params
         exprVisitor.currentMethod = name;
         currentMethod = name;
         
         StringBuilder listParamsCode = new StringBuilder();
+        boolean hasVararg = false;
         if(node.getNumChildren() > 0) {
             var paramsNodes = node.getChildren(PARAM);
             if(currentMethod.equals("main")){
                 paramsNodes = node.getChildren(MAIN_PARAM);
             }
+
+
             for (int i = 0; i < paramsNodes.size(); i++) {
+                if(!currentMethod.equals("main")) {
+                    hasVararg = paramsNodes.get(i).getChild(0).getKind().equals(VAR_ARG_TYPE.getNodeName());
+                }
                 var paramCode = visit(paramsNodes.get(i));
                 listParamsCode.append(paramCode);
                 if (i < paramsNodes.size() - 1) {
@@ -251,6 +256,20 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
                 }
             }
         }
+
+        //insert vararg type if a vararg was detected in the arguments
+        if(hasVararg){
+            code.append("varargs");
+        }
+
+        //append name
+        if(name.trim().equals("varargs") && hasVararg){
+            code.append("\"").append(name).append("\"");
+        }
+        else {
+            code.append(name);
+        }
+
         code.append("(" + listParamsCode + ")");
 
         // return type
