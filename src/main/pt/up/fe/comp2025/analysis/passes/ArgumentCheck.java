@@ -24,6 +24,12 @@ public class ArgumentCheck extends AnalysisVisitor {
     private Void visitMethodDecl(JmmNode method, SymbolTable table) {
         currentMethod = method.get("name");
 
+        //special handling for the main function
+        if(currentMethod.equals("main")){
+            this.handleMain(method, table);
+            return null;
+        }
+
         // check for multiple varargs in method parameters
         List<Symbol> parameters = table.getParameters(currentMethod);
 
@@ -61,6 +67,33 @@ public class ArgumentCheck extends AnalysisVisitor {
             }
         }
 
+        return null;
+    }
+
+    private Void handleMain(JmmNode method, SymbolTable table){
+        List<Symbol> parameters = table.getParameters(currentMethod);
+        if(parameters.size() != 1){
+            addReport(Report.newError(
+                    Stage.SEMANTIC,
+                    method.getLine(),
+                    method.getColumn(),
+                    "Invalid main method: invalid number of parameters",
+                    null
+            ));
+            return null;
+        }
+
+        Symbol param = parameters.get(0);
+        if(!param.getType().getName().equals("String") || !param.getType().isArray()){
+            addReport(Report.newError(
+                    Stage.SEMANTIC,
+                    method.getLine(),
+                    method.getColumn(),
+                    "Invalid main method: invalid parameter type",
+                    null
+            ));
+            return null;
+        }
         return null;
     }
 

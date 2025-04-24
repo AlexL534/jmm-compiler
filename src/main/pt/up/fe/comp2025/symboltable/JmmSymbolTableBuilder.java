@@ -99,6 +99,11 @@ public class JmmSymbolTableBuilder {
             var typeDecl = method.getChildren(RETURN_TYPE);
 
             if(typeDecl.isEmpty()){
+                typeDecl = method.getChildren(RETURN_TYPE_MAIN);
+                if(typeDecl.isEmpty()){
+                    var report = newError(method, "Invalid main method: invalid return type");
+                    reports.add(report);
+                }
                 map.put(name, TypeUtils.newVoidType());
                 continue;
             }
@@ -116,10 +121,16 @@ public class JmmSymbolTableBuilder {
 
         for (var method : classDecl.getChildren(METHOD_DECL)) {
             var name = method.get("name");
-
-            var params = method.getChildren(PARAM).stream()
-                    .map(param -> new Symbol(TypeUtils.convertType(param.getChild(0)), param.get("name")))
-                    .toList();
+            List<Symbol> params;
+            if(name.equals("main")){
+                params = method.getChildren(MAIN_PARAM).stream()
+                        .map(param -> new Symbol(TypeUtils.newStringArrayType(), param.get("name")))
+                        .toList();
+            }else {
+                params = method.getChildren(PARAM).stream()
+                        .map(param -> new Symbol(TypeUtils.convertType(param.getChild(0)), param.get("name")))
+                        .toList();
+            }
 
             List<String> auxList = new ArrayList<>();
             for(var param : params){

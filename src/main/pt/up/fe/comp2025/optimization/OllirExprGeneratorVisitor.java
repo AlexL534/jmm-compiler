@@ -44,6 +44,7 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         addVisit(ARRAY_SUBSCRIPT, this::visitArraySubscript);
         addVisit(METHOD_CALL, this::visitMethodCall);
         addVisit(NEW_OBJECT, this::visitNewObject);
+        addVisit(UNARY_OP, this::visitUnaryOp);
 
         setDefaultVisit(this::defaultVisit);
     }
@@ -79,7 +80,7 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         String tempVar = ollirTypes.nextTemp() + lenType;
 
         StringBuilder computation = new StringBuilder();
-
+        computation.append(arrayReference.getComputation());
         computation.append(tempVar).append(SPACE)
                 .append(ASSIGN).append(lenType).append(SPACE)
                 .append("arraylength( ").append(arrayReference.getCode()).append(")").append(lenType)
@@ -219,6 +220,31 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         computation.append(code).append(SPACE)
                 .append(ASSIGN).append(resOllirType).append(SPACE)
                 .append(lhs.getCode()).append(SPACE);
+
+        Type type = types.getExprType(node);
+        computation.append(node.get("op")).append(ollirTypes.toOllirType(type)).append(SPACE)
+                .append(rhs.getCode()).append(END_STMT);
+
+        return new OllirExprResult(code, computation);
+    }
+
+    private OllirExprResult visitUnaryOp(JmmNode node, Void unused) {
+
+        var rhs = visit(node.getChild(0));
+
+        StringBuilder computation = new StringBuilder();
+
+        // code to compute the children
+        computation.append(rhs.getComputation());
+
+        // code to compute self
+        types.setCurrentMethod(currentMethod);
+        Type resType = types.getExprType(node);
+        String resOllirType = ollirTypes.toOllirType(resType);
+        String code = ollirTypes.nextTemp() + resOllirType;
+
+        computation.append(code).append(SPACE)
+                .append(ASSIGN).append(resOllirType).append(SPACE);
 
         Type type = types.getExprType(node);
         computation.append(node.get("op")).append(ollirTypes.toOllirType(type)).append(SPACE)

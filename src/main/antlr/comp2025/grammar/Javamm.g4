@@ -38,15 +38,23 @@ classDecl
     ;
 
 varDecl
-    : type name=ID ('=' expr)? ';'
+    : type name=ID';'
     ;
 
 param
     : type name=ID
     ;
 
+mainParam
+    : STRING '[' ']' name=ID
+    ;
+
 returnType
     : type
+    ;
+
+returnTypeMain
+    : 'static' 'void'
     ;
 
 returnStmt
@@ -54,8 +62,15 @@ returnStmt
     ;
 
 methodDecl
+    returns [boolean isPublic]
     : (PUBLIC) ? returnType name=ID '(' (param (',' param)*)? ')' '{' varDecl* stmt* returnStmt '}'
-    | (PUBLIC) ? 'static' 'void' name=ID '(' STRING '[' ']' ID ')' '{' varDecl* stmt* '}'
+        {
+           $isPublic = $PUBLIC != null;
+        }
+    | (PUBLIC) ? returnTypeMain name=ID '(' mainParam ')' '{' varDecl* stmt* '}'
+        {
+           $isPublic = $PUBLIC != null;
+        }
     ;
 
 type
