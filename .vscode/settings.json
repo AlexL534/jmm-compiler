@@ -1,0 +1,8 @@
+{
+    "java.home": "/path/to/java",
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "python.testing.nosetestsEnabled": false,
+    "javascript.testRunner": "jest",
+    "jest.autoDetect": true
+}

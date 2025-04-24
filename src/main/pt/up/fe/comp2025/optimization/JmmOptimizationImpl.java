@@ -4,15 +4,21 @@ import pt.up.fe.comp.jmm.analysis.JmmSemanticsResult;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.ollir.JmmOptimization;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
+import pt.up.fe.comp.jmm.report.Report;
+import pt.up.fe.comp2025.ConfigOptions;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 public class JmmOptimizationImpl implements JmmOptimization {
 
     private final OptimizationManager optimizationManager;
+    private final RegisterAllocator registerAllocator;
     
     public JmmOptimizationImpl() {
         this.optimizationManager = new OptimizationManager();
+        this.registerAllocator = new RegisterAllocator();
     }
     
     @Override
@@ -60,31 +66,28 @@ public class JmmOptimizationImpl implements JmmOptimization {
 
     @Override
     public OllirResult optimize(OllirResult ollirResult) {
-        // Currently we're doing AST-based optimizations only
-        // OLLIR-based optimizations would be implemented here
-
-        var config = ollirResult.getConfig();
-        if(!config.containsKey("registerAllocation")){
-            return ollirResult;
+        List<Report> reports = new ArrayList<>(ollirResult.getReports());
+        
+        // Check if register allocation is requested
+        int registerAllocation = ConfigOptions.getRegisterAllocation(ollirResult.getConfig());
+        
+        if (registerAllocation != -1) {
+            System.out.println("Performing register allocation with " + 
+                (registerAllocation == 0 ? "minimized" : registerAllocation) + " registers...");
+            
+            // Perform register allocation
+            List<Report> regAllocReports = registerAllocator.allocateRegisters(ollirResult, registerAllocation);
+            reports.addAll(regAllocReports);
+            
+            if (regAllocReports.isEmpty()) {
+                System.out.println("Register allocation completed successfully!");
+            } else {
+                System.out.println("Register allocation encountered issues. See reports for details.");
+            }
         }
-        var registers = config.get("registerAllocation");
-        if(registers.equals("-1")){
-            //use the same ollir. No optimizations needed
-            return ollirResult;
-        }
-        var ollirClass =  ollirResult.getOllirClass();
-
-        //build the cfg
-        ollirClass.buildCFGs();
-
-        //TODO: liveness analysis
-        var dataFlow = new DataFlowAnalysis();
-        for(var method : ollirClass.getMethods()){
-            dataFlow.analyseMethod(method);
-        }
-
-        //TODO: Interference Graph
-        //TODO: Graph Coloring
+        
+        // Register allocation modifies the ClassUnit object within ollirResult directly
+        // So we just need to return the original result with updated reports
 
         return ollirResult;
     }

@@ -135,9 +135,14 @@ public class ConstantPropagationVisitor extends AJmmVisitor<Void, Boolean> {
     }
     
     private Boolean visitWhileStmt(JmmNode node, Void unused) {
-        // Visit condition first
+        // Visit condition first and apply constant propagation to it
         if (node.getNumChildren() > 0) {
-            visit(node.getChild(0));
+            JmmNode condition = node.getChild(0);
+            // First pass to replace variables with constants without evaluating the condition
+            propagateConstantsInCondition(condition);
+            
+            // Then visit the condition to apply any other optimizations
+            visit(condition);
         }
         
         // Variables modified inside loop body cannot be propagated
@@ -147,6 +152,45 @@ public class ConstantPropagationVisitor extends AJmmVisitor<Void, Boolean> {
         }
         
         return false;
+    }
+    
+    /**
+     * Propagate constants in a condition expression without evaluating the condition
+     */
+    private void propagateConstantsInCondition(JmmNode conditionNode) {
+        if (conditionNode == null) return;
+        
+        // If this is a variable reference, try to replace it with its constant value
+        if (conditionNode.getKind().equals(Kind.VAR_REF_EXPR.getNodeName())) {
+            String varName = conditionNode.get("name");
+            if (currentMethod != null && methodScopeVariables.get(currentMethod).containsKey(varName) && 
+                !variableModifiedInBranch.containsKey(varName)) {
+                
+                JmmNode constantNode = methodScopeVariables.get(currentMethod).get(varName);
+                if (isConstant(constantNode)) {
+                    // Create a copy of the constant node
+                    JmmNode newNode;
+                    if (constantNode.getKind().equals(Kind.INTEGER_LITERAL.getNodeName())) {
+                        newNode = new JmmNodeImpl(Kind.toNodeName(Kind.INTEGER_LITERAL));
+                        newNode.put("value", constantNode.get("value"));
+                        conditionNode.replace(newNode);
+                        modified = true;
+                    } else if (constantNode.getKind().equals(Kind.BOOLEAN_LITERAL.getNodeName())) {
+                        newNode = new JmmNodeImpl(Kind.toNodeName(Kind.BOOLEAN_LITERAL));
+                        newNode.put("value", constantNode.get("value"));
+                        conditionNode.replace(newNode);
+                        modified = true;
+                    }
+                }
+            }
+        } 
+        // If it's a binary operation or other node, visit its children
+        else {
+            // Make a copy of children list to avoid concurrent modification issues
+            for (int i = 0; i < conditionNode.getNumChildren(); i++) {
+                propagateConstantsInCondition(conditionNode.getChild(i));
+            }
+        }
     }
     
     private Boolean visitIfStmt(JmmNode node, Void unused) {
