@@ -62,8 +62,15 @@ returnStmt
     ;
 
 methodDecl
+    returns [boolean isPublic]
     : (PUBLIC) ? returnType name=ID '(' (param (',' param)*)? ')' '{' varDecl* stmt* returnStmt '}'
+        {
+           $isPublic = $PUBLIC != null;
+        }
     | (PUBLIC) ? returnTypeMain name=ID '(' mainParam ')' '{' varDecl* stmt* '}'
+        {
+           $isPublic = $PUBLIC != null;
+        }
     ;
 
 type
