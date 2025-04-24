@@ -80,7 +80,7 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         String tempVar = ollirTypes.nextTemp() + lenType;
 
         StringBuilder computation = new StringBuilder();
-
+        computation.append(arrayReference.getComputation());
         computation.append(tempVar).append(SPACE)
                 .append(ASSIGN).append(lenType).append(SPACE)
                 .append("arraylength( ").append(arrayReference.getCode()).append(")").append(lenType)

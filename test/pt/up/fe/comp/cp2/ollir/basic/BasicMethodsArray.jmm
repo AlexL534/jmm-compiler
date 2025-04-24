@@ -6,7 +6,7 @@ class BasicMethods extends Other {
 
     public int[] func4(){
         int[] k;
-        k = new int[1];
+        k = new int[2];
         return k;
     }
 
