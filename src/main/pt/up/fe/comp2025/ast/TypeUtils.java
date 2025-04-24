@@ -35,6 +35,8 @@ public class TypeUtils {
 
     public static Type newVoidType() {return new Type("void", false);}
 
+    public static Type newStringArrayType() {return new Type("String", true);}
+
     public static Type convertType(JmmNode typeNode) {
 
         var name = typeNode.get("value");

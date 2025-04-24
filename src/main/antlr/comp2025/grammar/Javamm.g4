@@ -45,8 +45,16 @@ param
     : type name=ID
     ;
 
+mainParam
+    : STRING '[' ']' name=ID
+    ;
+
 returnType
     : type
+    ;
+
+returnTypeMain
+    : 'static' 'void'
     ;
 
 returnStmt
@@ -55,7 +63,7 @@ returnStmt
 
 methodDecl
     : (PUBLIC) ? returnType name=ID '(' (param (',' param)*)? ')' '{' varDecl* stmt* returnStmt '}'
-    | (PUBLIC) ? 'static' 'void' name=ID '(' STRING '[' ']' ID ')' '{' varDecl* stmt* '}'
+    | (PUBLIC) ? returnTypeMain name=ID '(' mainParam ')' '{' varDecl* stmt* '}'
     ;
 
 type
