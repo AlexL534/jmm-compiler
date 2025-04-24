@@ -14,9 +14,6 @@ class CompileBasic extends Quicksort {
         return boolParam1;
     }
 
-    public int varargs(int... a) {
-            return a[0];
-    }
 
 
     public static void main(String[] args) {
