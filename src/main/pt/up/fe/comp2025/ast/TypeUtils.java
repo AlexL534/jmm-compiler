@@ -86,7 +86,7 @@ public class TypeUtils {
         else if(Kind.BOOLEAN_LITERAL.check(expr)){
             type = "boolean";
         }
-        else if(Kind.VAR_REF_EXPR.check(expr)) {
+        else if(Kind.VAR_REF_EXPR.check(expr) || Kind.VAR_DECL.check(expr)) {
             for (Symbol field : table.getFields()) {
                 if (field.getName().equals(expr.get("name"))) {
                     type = field.getType().getName();

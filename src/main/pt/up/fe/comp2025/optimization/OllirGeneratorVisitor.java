@@ -61,8 +61,24 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         addVisit(ARRAY_CREATION, this::visitArrayCreation);
         addVisit(BLOCK_STMT, this::visitBlockStmt);
         addVisit(ARRAY_ASSIGN_STMT, this::visitArrayAssignStmt);
+        addVisit(VAR_DECL, this::visitVarDecl);
 
         //setDefaultVisit(this::defaultVisit);
+    }
+
+    private String visitVarDecl(JmmNode node, Void unused) {
+        StringBuilder code = new StringBuilder();
+
+        String a = node.getParent().getKind();
+        //check if is field
+        if(!node.getParent().getKind().equals("ClassDef")) {
+            return "";
+        }
+        Type type = types.getExprType(node);
+        String ollirType = ollirTypes.toOllirType(type);
+        code.append(".field ").append("public ").append(node.get("name")).append(ollirType).append(END_STMT);
+
+        return code.toString();
     }
 
     private String visitExprStmt(JmmNode node, Void unused) {
@@ -317,6 +333,11 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         code.append(NL);
         code.append(NL);
 
+        for(var child : node.getChildren(VAR_DECL)){
+            var result = visit(child);
+            code.append(result);
+        }
+
         code.append(buildConstructor());
         code.append(NL);
 
@@ -361,14 +382,9 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         StringBuilder args = new StringBuilder();
         for (int i = 1; i < node.getChildren().size(); i++ ) {
             JmmNode child = node.getChildren().get(i);
-            Type nodeType = types.getExprType(child);
-            String ollirType = ollirTypes.toOllirType(nodeType);
             var kind = child.getKind();
 
-            if(Kind.fromString(kind).equals(INTEGER_LITERAL) || Kind.fromString(kind).equals(BOOLEAN_LITERAL)) {
-                args.append(child.get("value"));
-            }
-            else if (Kind.fromString(kind).equals(VAR_REF_EXPR)) {
+            if (Kind.fromString(kind).equals(VAR_REF_EXPR) || Kind.fromString(kind).equals(INTEGER_LITERAL) || Kind.fromString(kind).equals(BOOLEAN_LITERAL)) {
                 var result = exprVisitor.visit(child);
                 args.append(result.getCode());
             }
@@ -379,8 +395,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
                 methodCall.append(result.getCode());
             }
 
-            args.append(ollirType);
-            if(i < node.getChildren().size() - 2) {
+            if(i <= node.getChildren().size() - 2) {
                 args.append(", ");
             }
         }

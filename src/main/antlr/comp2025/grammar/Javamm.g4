@@ -38,7 +38,7 @@ classDecl
     ;
 
 varDecl
-    : type name=ID ('=' expr)? ';'
+    : type name=ID';'
     ;
 
 param
