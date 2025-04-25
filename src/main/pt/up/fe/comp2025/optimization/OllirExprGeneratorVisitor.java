@@ -201,7 +201,14 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
 
 
     private OllirExprResult visitBinExpr(JmmNode node, Void unused) {
-
+        String op = node.get("op");
+        
+        // Special handling for logical AND operator to implement short-circuit evaluation
+        if (op.equals("&&")) {
+            return visitLogicalAnd(node);
+        }
+        
+        // Standard binary operation handling for other operators
         var lhs = visit(node.getChild(0));
         var rhs = visit(node.getChild(1));
 
@@ -222,10 +229,46 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
                 .append(lhs.getCode()).append(SPACE);
 
         Type type = types.getExprType(node);
-        computation.append(node.get("op")).append(ollirTypes.toOllirType(type)).append(SPACE)
+        computation.append(op).append(ollirTypes.toOllirType(type)).append(SPACE)
                 .append(rhs.getCode()).append(END_STMT);
 
         return new OllirExprResult(code, computation);
+    }
+    
+    private OllirExprResult visitLogicalAnd(JmmNode node) {
+        // Get the left and right operands
+        var leftOperand = visit(node.getChild(0));
+        var rightOperand = visit(node.getChild(1));
+        
+        StringBuilder computation = new StringBuilder();
+        
+        // Include the computation for the left operand
+        computation.append(leftOperand.getComputation());
+        
+        // Create a result temporary variable
+        Type boolType = TypeUtils.newBooleanType();
+        String boolOllirType = ollirTypes.toOllirType(boolType);
+        String resultVar = ollirTypes.nextTemp() + boolOllirType;
+        
+        // Create labels for the short-circuit flow
+        String trueLabel = "and_true_" + ollirTypes.nextTemp("and");
+        String falseLabel = "and_false_" + ollirTypes.nextTemp("and");
+        String endLabel = "and_end_" + ollirTypes.nextTemp("and");
+        
+        // Check if left operand is false, if so short-circuit to false label
+        computation.append("if (").append(leftOperand.getCode()).append(") goto ").append(trueLabel).append(END_STMT);
+        computation.append(resultVar).append(SPACE).append(ASSIGN).append(boolOllirType).append(SPACE).append("0").append(boolOllirType).append(END_STMT);
+        computation.append("goto ").append(endLabel).append(END_STMT);
+        
+        // If the first operand is true, evaluate the second operand
+        computation.append(trueLabel).append(":").append("\n");
+        computation.append(rightOperand.getComputation());
+        computation.append(resultVar).append(SPACE).append(ASSIGN).append(boolOllirType).append(SPACE).append(rightOperand.getCode()).append(END_STMT);
+        
+        // End label
+        computation.append(endLabel).append(":").append("\n");
+        
+        return new OllirExprResult(resultVar, computation);
     }
 
     private OllirExprResult visitUnaryOp(JmmNode node, Void unused) {
