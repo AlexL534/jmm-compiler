@@ -1,0 +1,22 @@
+class RegAlloc {
+    public int methodWithCalls(int arg) {
+        int a;
+        int b;
+        int c;
+        int result;
+        
+        a = 10;
+        b = helper(a);     // Value of a is live across the call
+        c = helper(b);     // Value of b is live across the call
+        result = a + b + c; // All values used after their computations
+        
+        return result;
+    }
+    
+    public int helper(int value) {
+        return value * 2;  // Simple helper method
+    }
+
+    public static void main(String[] args) {
+    }
+}

@@ -1,0 +1,32 @@
+class RegAlloc {
+    public int arrayAccess(int size) {
+        int[] arr;
+        int i;
+        int sum;
+        int temp;
+        int j;
+        
+        arr = new int[size];
+        i = 0;
+        sum = 0;
+        
+        // Initialize array
+        while (i < size) {
+            arr[i] = i * 2;
+            i = i + 1;
+        }
+        
+        // Sum array values with a different variable
+        j = 0;
+        while (j < size) {
+            temp = arr[j];  // Array access with register for index
+            sum = sum + temp;
+            j = j + 1;
+        }
+        
+        return sum;
+    }
+
+    public static void main(String[] args) {
+    }
+}

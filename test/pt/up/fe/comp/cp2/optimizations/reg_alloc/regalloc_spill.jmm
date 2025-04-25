@@ -1,0 +1,31 @@
+class RegAlloc {
+    public int manyLiveVars(int arg) {
+        int a;
+        int b;
+        int c;
+        int d;
+        int e;
+        int f;
+        int g;
+        int h;
+        int result;
+        
+        // Set initial values
+        a = 1;
+        b = 2;
+        c = 3;
+        d = 4;
+        e = 5;
+        f = 6;
+        g = 7;
+        h = 8;
+        
+        // All variables are live here in a complex expression
+        result = (a + b) * (c - d) + (e * f) / (g + h);
+        
+        return result;
+    }
+
+    public static void main(String[] args) {
+    }
+}

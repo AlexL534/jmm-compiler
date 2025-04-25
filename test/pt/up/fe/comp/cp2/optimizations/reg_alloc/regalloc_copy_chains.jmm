@@ -1,0 +1,29 @@
+class RegAlloc {
+    public int copyChains(int arg) {
+        int a;
+        int b;
+        int c;
+        int d;
+        int x;
+        int y;
+        int z;
+        
+        // First set of variables with complex copy chains
+        a = arg;
+        b = a;    // b should share register with a
+        c = b;    // c should share register with a and b
+        
+        // Second set of variables with complex copy chains
+        x = arg * 2;
+        y = x;    // y should share register with x
+        z = y;    // z should share register with x and y
+        
+        // Use values after copy chains
+        d = a + z;  // a and z used for computation
+        
+        return d;
+    }
+
+    public static void main(String[] args) {
+    }
+}
