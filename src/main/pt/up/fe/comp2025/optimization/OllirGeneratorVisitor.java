@@ -165,25 +165,49 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
 
         // code to compute self
         // statement has type of lhs
-        var left = node;
-        types.setCurrentMethod(currentMethod);
-        Type thisType = types.getExprType(left);
-        String typeString = ollirTypes.toOllirType(thisType);
-        var varCode = left.get("varName") + typeString;
+        // Check if it's a field assignment
+        String varName = node.get("varName");
+        if (isClassField(varName)) {
+            Type fieldType = types.getExprType(node.getChild(0));
+            String ollirType = ollirTypes.toOllirType(fieldType);
 
+            code.append("putfield(this, ")
+                    .append(varName).append(ollirType)
+                    .append(", ").append(rhs.getCode()).append(")")
+                    .append(".V").append(END_STMT);
+        } else {
+            Type thisType = types.getExprType(node);
+            String typeString = ollirTypes.toOllirType(thisType);
+            var varCode = varName + typeString;
 
-        code.append(varCode);
-        code.append(SPACE);
+            code.append(varCode);
+            code.append(SPACE);
 
-        code.append(ASSIGN);
-        code.append(typeString);
-        code.append(SPACE);
+            code.append(ASSIGN);
+            code.append(typeString);
+            code.append(SPACE);
 
-        code.append(rhs.getCode());
+            code.append(rhs.getCode());
 
-        code.append(END_STMT);
+            code.append(END_STMT);
+        }
 
         return code.toString();
+    }
+
+    private boolean isClassField(String varName) {
+        if (currentMethod != null) {
+            if (table.getParameters(currentMethod).stream().anyMatch(param -> param.getName().equals(varName))) {
+                return false;
+            }
+
+            if (table.getLocalVariables(currentMethod) != null &&
+                    table.getLocalVariables(currentMethod).stream().anyMatch(local -> local.getName().equals(varName))) {
+                return false;
+            }
+        }
+
+        return table.getFields().stream().anyMatch(field -> field.getName().equals(varName));
     }
 
 
