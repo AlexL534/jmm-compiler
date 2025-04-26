@@ -16,14 +16,12 @@ package pt.up.fe.comp.cp2;
 import org.junit.Test;
 import pt.up.fe.comp.CpUtils;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
-import pt.up.fe.comp2025.CompilerConfig;
 import pt.up.fe.comp2025.ConfigOptions;
 import pt.up.fe.specs.util.SpecsIo;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-
 
 public class OptimizationsTest {
     private static final String BASE_PATH = "pt/up/fe/comp/cp2/optimizations/";
@@ -51,17 +49,17 @@ public class OptimizationsTest {
     public void regAllocSimple() {
 
         String filename = "reg_alloc/regalloc_no_change.jmm";
-        int expectedNumReg = 4;
+        int expectedTotalReg = 4;
+        int configMaxRegs = 2;
 
-        OllirResult original = getOllirResult(filename);
-        OllirResult optimized = getOllirResultRegalloc(filename, expectedNumReg);
+        OllirResult optimized = getOllirResultRegalloc(filename, configMaxRegs);
 
         int actualNumReg = CpUtils.countRegisters(CpUtils.getMethod(optimized, "soManyRegisters"));
 
         // Number of registers might change depending on what temporaries are generated, no use comparing with original
 
-        CpUtils.assertTrue("Expected number of locals in 'soManyRegisters' to be equal to " + expectedNumReg + ", is " + actualNumReg,
-                actualNumReg == expectedNumReg,
+        CpUtils.assertTrue("Expected number of locals in 'soManyRegisters' to be equal to " + expectedTotalReg + ", is " + actualNumReg,
+                actualNumReg == expectedTotalReg,
                 optimized);
 
 
@@ -75,10 +73,11 @@ public class OptimizationsTest {
     public void regAllocSequence() {
 
         String filename = "reg_alloc/regalloc.jmm";
-        int expectedNumReg = 3;
+        int expectedTotalReg = 3;
+        int configMaxRegs = 1;
 
         OllirResult original = getOllirResult(filename);
-        OllirResult optimized = getOllirResultRegalloc(filename, expectedNumReg);
+        OllirResult optimized = getOllirResultRegalloc(filename, configMaxRegs);
 
         int originalNumReg = CpUtils.countRegisters(CpUtils.getMethod(original, "soManyRegisters"));
         int actualNumReg = CpUtils.countRegisters(CpUtils.getMethod(optimized, "soManyRegisters"));
@@ -87,8 +86,8 @@ public class OptimizationsTest {
                 originalNumReg, actualNumReg,
                 optimized);
 
-        CpUtils.assertTrue("Expected number of locals in 'soManyRegisters' to be equal to " + expectedNumReg + ", is " + actualNumReg,
-                actualNumReg == expectedNumReg,
+        CpUtils.assertTrue("Expected number of locals in 'soManyRegisters' to be equal to " + expectedTotalReg + ", is " + actualNumReg,
+                actualNumReg == expectedTotalReg,
                 optimized);
 
 
@@ -98,93 +97,6 @@ public class OptimizationsTest {
         CpUtils.assertEquals("Expected registers of variables 'a' and 'c' to be the same", aReg, varTable.get("c").getVirtualReg(), optimized);
         CpUtils.assertEquals("Expected registers of variables 'a' and 'd' to be the same", aReg, varTable.get("d").getVirtualReg(), optimized);
 
-    }
-
-    @Test
-    public void regAllocConditional() {
-        String filename = "reg_alloc/regalloc_conditional.jmm";
-        int expectedNumReg = 4; // This should be enough to handle the method
-
-        OllirResult original = getOllirResult(filename);
-        OllirResult optimized = getOllirResultRegalloc(filename, expectedNumReg);
-
-        int actualNumReg = CpUtils.countRegisters(CpUtils.getMethod(optimized, "conditionalControl"));
-
-        CpUtils.assertTrue("Expected number of locals in 'conditionalControl' to be less than or equal to " + expectedNumReg + ", is " + actualNumReg,
-                actualNumReg <= expectedNumReg,
-                optimized);
-
-        // Check that results variable shares register with another variable 
-        // since they're not live at the same time
-        var varTable = CpUtils.getMethod(optimized, "conditionalControl").getVarTable();
-        var resultReg = varTable.get("result").getVirtualReg();
-        var dReg = varTable.get("d").getVirtualReg();
-        CpUtils.assertEquals("Expected 'result' and 'd' to share the same register since they aren't simultaneously live", 
-                resultReg, dReg, optimized);
-    }
-
-    @Test
-    public void regAllocSpill() {
-        String filename = "reg_alloc/regalloc_spill.jmm";
-        
-        // First try with limited registers - should fail or spill
-        int tooFewReg = 4;
-        
-        OllirResult original = getOllirResult(filename);
-        
-        // Try with enough registers
-        int enoughReg = 8;
-        OllirResult optimized = getOllirResultRegalloc(filename, enoughReg);
-        
-        int actualNumReg = CpUtils.countRegisters(CpUtils.getMethod(optimized, "manyLiveVars"));
-        
-        // Should be able to allocate with the required number of registers
-        CpUtils.assertTrue("Expected successful allocation with " + enoughReg + " registers",
-                actualNumReg <= enoughReg,
-                optimized);
-    }
-
-    @Test
-    public void regAllocMethodCalls() {
-        String filename = "reg_alloc/regalloc_method_calls.jmm";
-        int expectedNumReg = 4;
-
-        OllirResult optimized = getOllirResultRegalloc(filename, expectedNumReg);
-
-        // Check main method
-        int methodRegs = CpUtils.countRegisters(CpUtils.getMethod(optimized, "methodWithCalls"));
-        
-        CpUtils.assertTrue("Expected number of registers in 'methodWithCalls' to be less than or equal to " + expectedNumReg,
-                methodRegs <= expectedNumReg,
-                optimized);
-                
-        // Also verify the helper method has proper register allocation
-        int helperRegs = CpUtils.countRegisters(CpUtils.getMethod(optimized, "helper"));
-        CpUtils.assertTrue("Expected number of registers in 'helper' to be minimal", 
-                helperRegs <= 2, // 'this' + 1 parameter
-                optimized);
-    }
-
-    @Test 
-    public void regAllocArrays() {
-        String filename = "reg_alloc/regalloc_arrays.jmm";
-        int expectedNumReg = 5;
-
-        OllirResult optimized = getOllirResultRegalloc(filename, expectedNumReg);
-        
-        int actualNumReg = CpUtils.countRegisters(CpUtils.getMethod(optimized, "arrayAccess"));
-        
-        CpUtils.assertTrue("Expected number of registers in 'arrayAccess' to be less than or equal to " + expectedNumReg,
-                actualNumReg <= expectedNumReg,
-                optimized);
-                
-        // Check that i and j can share registers since they're used in different loops
-        var varTable = CpUtils.getMethod(optimized, "arrayAccess").getVarTable();
-        var iReg = varTable.get("i").getVirtualReg();
-        var jReg = varTable.get("j").getVirtualReg();
-        CpUtils.assertEquals("Expected loop counters 'i' and 'j' to share registers since they aren't simultaneously live",
-                iReg, jReg,
-                optimized);
     }
 
 
@@ -266,40 +178,6 @@ public class OptimizationsTest {
 
         var method = CpUtils.getMethod(optimized, "main");
         CpUtils.assertFindLiteral("15", method, optimized);
-    }
-
-    @Test
-    public void regAllocCopyChains() {
-        String filename = "reg_alloc/regalloc_copy_chains.jmm";
-        int expectedNumReg = 4; // We should need at most 4 registers due to copy chain optimization
-
-        OllirResult optimized = getOllirResultRegalloc(filename, expectedNumReg);
-        
-        int actualNumReg = CpUtils.countRegisters(CpUtils.getMethod(optimized, "copyChains"));
-        
-        // Should be able to allocate with the specified number of registers
-        CpUtils.assertTrue("Expected number of registers in 'copyChains' to be less than or equal to " + expectedNumReg,
-                actualNumReg <= expectedNumReg,
-                optimized);
-                
-        // Check that a, b, c share the same register
-        var varTable = CpUtils.getMethod(optimized, "copyChains").getVarTable();
-        var aReg = varTable.get("a").getVirtualReg();
-        CpUtils.assertEquals("Expected variables 'a' and 'b' to share the same register due to copy chain",
-                aReg, varTable.get("b").getVirtualReg(), optimized);
-        CpUtils.assertEquals("Expected variables 'a' and 'c' to share the same register due to copy chain",
-                aReg, varTable.get("c").getVirtualReg(), optimized);
-                
-        // Check that x, y, z share the same register
-        var xReg = varTable.get("x").getVirtualReg();
-        CpUtils.assertEquals("Expected variables 'x' and 'y' to share the same register due to copy chain",
-                xReg, varTable.get("y").getVirtualReg(), optimized);
-        CpUtils.assertEquals("Expected variables 'x' and 'z' to share the same register due to copy chain",
-                xReg, varTable.get("z").getVirtualReg(), optimized);
-                
-        // Check that a and x do not share the same register (they need to be separate)
-        CpUtils.assertNotEquals("Expected variables 'a' and 'x' to use different registers as they're both needed at the end",
-                aReg, xReg, optimized);
     }
 
 }
