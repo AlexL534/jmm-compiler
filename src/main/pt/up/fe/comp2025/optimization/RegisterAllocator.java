@@ -7,6 +7,7 @@ import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.report.Stage;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Register allocator for the J-- compiler.
@@ -54,32 +55,32 @@ public class RegisterAllocator {
             if (method.isConstructMethod()) {
                 continue; // Skip constructor method
             }
-            
+
             try {
                 if (maxRegisters == 0) {
                     // Optimization: Use as few registers as possible
                     minimizeRegisters(method);
-                    reports.add(Report.newLog(Stage.OPTIMIZATION, 0, 0, 
-                        "Register allocation (minimized) for method " + method.getMethodName() + 
+                    reports.add(Report.newLog(Stage.OPTIMIZATION, 0, 0,
+                        "Register allocation (minimized) for method " + method.getMethodName() +
                         ": " + generateRegisterMappingReport(method), null));
                 } else {
                     // Limitation: Use at most maxRegisters registers
                     limitRegisters(method, maxRegisters);
                     reports.add(Report.newLog(Stage.OPTIMIZATION, 0, 0,
-                        "Register allocation (limited to " + maxRegisters + ") for method " + 
+                        "Register allocation (limited to " + maxRegisters + ") for method " +
                         method.getMethodName() + ": " + generateRegisterMappingReport(method), null));
                 }
             } catch (RegisterAllocationException e) {
                 reports.add(Report.newError(Stage.OPTIMIZATION, 0, 0,
-                    "Register allocation failed for method " + method.getMethodName() + 
+                    "Register allocation failed for method " + method.getMethodName() +
                     ": " + e.getMessage() + ". Minimum registers required: " + e.getMinRegistersNeeded(), null));
             } catch (Exception e) {
                 reports.add(Report.newError(Stage.OPTIMIZATION, 0, 0,
-                    "Register allocation failed for method " + method.getMethodName() + 
+                    "Register allocation failed for method " + method.getMethodName() +
                     ": " + e.getMessage(), e));
             }
         }
-        
+
         return reports;
     }
     
@@ -87,21 +88,18 @@ public class RegisterAllocator {
      * Minimizes the number of registers used by the method.
      */
     private void minimizeRegisters(Method method) {
-        // Analyze method to get liveness information
         Map<Instruction, Set<String>> liveIn = new HashMap<>();
         Map<Instruction, Set<String>> liveOut = new HashMap<>();
         performLivenessAnalysis(method, liveIn, liveOut);
-        
-        // Build the interference graph
+
+        method.buildCFG(); // ensure cfg is built
+
         Map<String, Set<String>> interferenceGraph = buildInterferenceGraph(method, liveIn, liveOut);
-        
-        // Apply optimizations for copy chains
+
         optimizeForCopyChains(method, interferenceGraph);
-        
-        // Color the graph using a greedy algorithm (minimizing colors)
+
         Map<String, Integer> colorAssignment = colorGraph(interferenceGraph);
-        
-        // Update the variable table with the new register assignments
+
         updateVarTable(method, colorAssignment);
     }
     
@@ -192,10 +190,8 @@ public class RegisterAllocator {
                 Set<String> oldLiveOut = new HashSet<>(liveOut.get(inst));
                 
                 // LiveOut = union of LiveIn of all successors
-                for (Integer succIndex : successors.get(i)) {
-                    if (succIndex >= 0 && succIndex < instructions.size()) {
-                        liveOut.get(inst).addAll(liveIn.get(instructions.get(succIndex)));
-                    }
+                for (int succIndex : successors.get(i)) {
+                    liveOut.get(inst).addAll(liveIn.get(instructions.get(succIndex)));
                 }
                 
                 // LiveIn = use U (liveOut - def)
@@ -217,29 +213,34 @@ public class RegisterAllocator {
      * Finds the successor instruction indices for a given instruction index.
      */
     private List<Integer> findSuccessors(Method method, int instructionIndex) {
-        List<Integer> successors = new ArrayList<>();
         List<Instruction> instructions = method.getInstructions();
+        int instructionCount = instructions.size();
+        List<Integer> successors = new ArrayList<>();
         Instruction inst = instructions.get(instructionIndex);
-        
-        // Default successor is the next instruction
-        if (instructionIndex < instructions.size() - 1) {
-            successors.add(instructionIndex + 1);
+
+        if (inst instanceof ReturnInstruction) {
+            // Return: no successors
+            return successors;
         }
         
         // Handle control flow instructions
         if (inst instanceof GotoInstruction) {
-            // For unconditional jumps, remove default successor
-            successors.clear();
-            // Add next instruction as fallback if we can't determine jump target
-            if (instructionIndex < instructions.size() - 1) {
+            // Goto: assume jump to unknown target, fallback to next if exists
+            if (instructionIndex + 1 < instructionCount) {
                 successors.add(instructionIndex + 1);
             }
-        } else if (inst instanceof CondBranchInstruction) {
-            // For conditional branches, keep default successor
-            // Note: We can't easily determine the branch target in this simplified model
-        } else if (inst instanceof ReturnInstruction) {
-            // Return has no successors
-            successors.clear();
+            return successors;
+        }
+        if (inst instanceof CondBranchInstruction) {
+            // Conditional branch: next instruction is a possible successor
+            if (instructionIndex + 1 < instructionCount) {
+                successors.add(instructionIndex + 1);
+            }
+        }
+
+        if (successors.isEmpty() && instructionIndex + 1 < instructionCount) {
+            // Regular fallthrough
+            successors.add(instructionIndex + 1);
         }
         
         return successors;
@@ -252,7 +253,7 @@ public class RegisterAllocator {
                                                           Map<Instruction, Set<String>> liveIn,
                                                           Map<Instruction, Set<String>> liveOut) {
         Map<String, Set<String>> interferenceGraph = new HashMap<>();
-        
+
         // Initialize the graph with all variables except 'this'
         for (String varName : method.getVarTable().keySet()) {
             if (!varName.equals("this")) {
@@ -260,9 +261,8 @@ public class RegisterAllocator {
             }
         }
         
-        // Build edges between variables that interfere
-        List<Instruction> instructions = method.getInstructions();
-        for (Instruction inst : instructions) {
+        // Build interference edges using def ∪ liveOut
+        for (Instruction inst : method.getInstructions()) {
             if (inst instanceof AssignInstruction assign) {
                 Element dest = assign.getDest();
                 
@@ -277,14 +277,14 @@ public class RegisterAllocator {
                         // Create interference unless this is a copy instruction and liveVar is the source
                         boolean isCopy = false;
                         String srcVar = null;
-                        
+
                         if (assign.getRhs() instanceof SingleOpInstruction sop) {
                             if (sop.getSingleOperand() instanceof Operand) {
                                 srcVar = ((Operand) sop.getSingleOperand()).getName();
                                 isCopy = true;
                             }
                         }
-                        
+
                         if (!(isCopy && liveVar.equals(srcVar))) {
                             interferenceGraph.get(destVar).add(liveVar);
                             interferenceGraph.get(liveVar).add(destVar);
@@ -415,10 +415,7 @@ public class RegisterAllocator {
         // Find all simple copy operations (a = b)
         for (Instruction inst : method.getInstructions()) {
             if (inst instanceof AssignInstruction assign) {
-
-                if (assign.getDest() instanceof Operand &&
-                        assign.getRhs() instanceof SingleOpInstruction sop) {
-
+                if (assign.getDest() instanceof Operand && assign.getRhs() instanceof SingleOpInstruction sop) {
                     if (sop.getSingleOperand() instanceof Operand) {
                         String destVar = ((Operand) assign.getDest()).getName();
                         String srcVar = ((Operand) sop.getSingleOperand()).getName();
@@ -444,11 +441,12 @@ public class RegisterAllocator {
             for (String var1 : relatedVars) {
                 for (String var2 : relatedVars) {
                     if (!var1.equals(var2) && interferenceGraph.get(var1).contains(var2)) {
-                        // Found two related variables that currently interfere
-                        // For variables in a copy chain, they sometimes don't need to interfere
-                        // if their live ranges don't truly overlap
+                        /* Found two related variables that currently interfere
+                        For variables in a copy chain, they sometimes don't need to interfere
+                        if their live ranges don't truly overlap
                         
-                        // Conservatively check if they're both only involved in copy operations
+                        Conservatively check if they're both only involved in copy operations */
+
                         boolean var1OnlyInCopies = isUsedOnlyInCopies(method, var1);
                         boolean var2OnlyInCopies = isUsedOnlyInCopies(method, var2);
                         
@@ -546,14 +544,8 @@ public class RegisterAllocator {
                 if (colorAssignment.containsKey(relatedVar)) continue;
                 
                 // Check if we can use the same color
-                boolean canUseColor = true;
-                for (String neighbor : interferenceGraph.get(relatedVar)) {
-                    if (colorAssignment.containsKey(neighbor) && colorAssignment.get(neighbor) == color) {
-                        canUseColor = false;
-                        break;
-                    }
-                }
-                
+                boolean canUseColor = canUseSameColor(interferenceGraph, colorAssignment, relatedVar, color);
+
                 if (canUseColor) {
                     colorAssignment.put(relatedVar, color);
                 }
@@ -569,6 +561,17 @@ public class RegisterAllocator {
         }
         
         return colorAssignment;
+    }
+
+    // Helper method to check if a color can be safely used for a variable
+    private boolean canUseSameColor(Map<String, Set<String>> interferenceGraph, Map<String, Integer> colorAssignment, String var, int color) {
+        for (String neighbor : interferenceGraph.get(var)) {
+            Integer neighborColor = colorAssignment.get(neighbor);
+            if (neighborColor != null && neighborColor == color) {
+                return false;
+            }
+        }
+        return true;
     }
     
     /**
@@ -577,58 +580,70 @@ public class RegisterAllocator {
     private Map<String, Integer> colorGraphLimited(
             Map<String, Set<String>> interferenceGraph, int maxColors) {
         Map<String, Integer> colorAssignment = new HashMap<>();
-        
-        // Sort variables by degree (number of interferences) in descending order
-        List<String> sortedVars = new ArrayList<>(interferenceGraph.keySet());
-        sortedVars.sort((v1, v2) -> 
-            Integer.compare(interferenceGraph.get(v2).size(), interferenceGraph.get(v1).size()));
-        
-        // First pass: handle variables in copy chains specially
-        Map<String, Set<String>> copyChains = findCopyChains(sortedVars, interferenceGraph);
-        for (Map.Entry<String, Set<String>> entry : copyChains.entrySet()) {
-            String var = entry.getKey();
-            if (colorAssignment.containsKey(var)) continue;
-            
-            // Find a color for this variable
-            int color = findSmallestAvailableColor(interferenceGraph, colorAssignment, var);
-            if (color >= maxColors) {
-                throw new RegisterAllocationException(color + 1);
-            }
-            colorAssignment.put(var, color);
-            
-            // Try to assign the same color to variables in its copy chain
-            for (String relatedVar : entry.getValue()) {
-                if (colorAssignment.containsKey(relatedVar)) continue;
-                
-                // Check if we can use the same color
-                boolean canUseColor = true;
-                for (String neighbor : interferenceGraph.get(relatedVar)) {
-                    if (colorAssignment.containsKey(neighbor) && colorAssignment.get(neighbor) == color) {
-                        canUseColor = false;
-                        break;
+
+        Map<String, Set<String>> graphCopy = new HashMap<>();
+        for (Map.Entry<String, Set<String>> entry : interferenceGraph.entrySet()) {
+            graphCopy.put(entry.getKey(), new HashSet<>(entry.getValue()));
+        }
+
+        //Simplify phase (build removal stack)
+        List<String> uncolored = new ArrayList<>(graphCopy.keySet());
+        Stack<String> removalStack = new Stack<>();
+
+        while (!uncolored.isEmpty()) {
+            boolean found = false;
+
+            // try to find a node with degree < maxColors
+            for (Iterator<String> it = uncolored.iterator(); it.hasNext();) {
+                String var = it.next();
+                if (graphCopy.get(var).size() < maxColors) {
+                    removalStack.push(var);
+                    it.remove();
+                    found = true;
+
+                    // Temporarily remove this node from its neighbors' adjacency lists
+                    for (String neighbor : graphCopy.get(var)) {
+                        graphCopy.get(neighbor).remove(var);
                     }
+                    break;
                 }
-                
-                if (canUseColor) {
-                    colorAssignment.put(relatedVar, color);
-                }
+            }
+
+            if (!found) {
+                // couldn't find a node with degree < maxColors - allocation impossible
+                throw new RegisterAllocationException(findMinimumRequiredRegisters(interferenceGraph));
             }
         }
-        
-        // Second pass: color remaining variables
-        for (String var : sortedVars) {
-            if (colorAssignment.containsKey(var)) continue;
-            
-            int color = findSmallestAvailableColor(interferenceGraph, colorAssignment, var);
-            if (color >= maxColors) {
-                throw new RegisterAllocationException(color + 1);
+
+        // select phase (color nodes in reverse removal order)
+
+        while (!removalStack.isEmpty()) {
+            String var = removalStack.pop();
+
+            // Find available color (smallest not used by neighbors)
+            Set<Integer> usedColors = new HashSet<>();
+            for (String neighbor : interferenceGraph.get(var)) {
+                Integer neighborColor = colorAssignment.get(neighbor);
+                if (neighborColor != null) {
+                    usedColors.add(neighborColor);
+                }
             }
+
+            int color = 0;
+            while (usedColors.contains(color) && color < maxColors) {
+                color++;
+            }
+
+            if (color >= maxColors) {
+                throw new RegisterAllocationException(maxColors + 1);
+            }
+
             colorAssignment.put(var, color);
         }
-        
+
         return colorAssignment;
     }
-    
+
     /**
      * Find the smallest color that can be assigned to a variable.
      */
@@ -685,63 +700,54 @@ public class RegisterAllocator {
      * Updates the variable table with the new register assignments.
      */
     private void updateVarTable(Method method, Map<String, Integer> colorAssignment) {
-        // Make sure 'this' is at register 0 if it exists
+        Set<String> paramNames = method.getParams().stream()
+                .filter(Operand.class::isInstance)
+                .map(param -> ((Operand) param).getName())
+                .collect(Collectors.toSet());
+
         int nextParamReg = 0;
+
+        // Assign register 0 to 'this' if it exists
         if (method.getVarTable().containsKey("this")) {
             method.getVarTable().get("this").setVirtualReg(nextParamReg++);
         }
-        
-        // Assign registers to parameters first (they need to be at specific slots)
-        for (Element param : method.getParams()) {
-            if (param instanceof Operand) {
-                String paramName = ((Operand) param).getName();
-                if (!paramName.equals("this")) { // Skip 'this', already handled
-                    method.getVarTable().get(paramName).setVirtualReg(nextParamReg++);
-                }
+
+        // Assign registers to other parameters
+        for (String paramName : paramNames) {
+            if (!paramName.equals("this")) {
+                method.getVarTable().get(paramName).setVirtualReg(nextParamReg++);
             }
         }
-        
-        // Base offset for local variables
+
         int localOffset = nextParamReg;
-        
-        // Now assign registers to local variables based on coloring
+
+        // Assign registers to local variables (not parameters or 'this') using the coloring
         for (Map.Entry<String, Integer> entry : colorAssignment.entrySet()) {
             String varName = entry.getKey();
-            int color = entry.getValue();
-            
-            // Only update local variables (not parameters)
-            boolean isParameter = false;
-            for (Element param : method.getParams()) {
-                if (param instanceof Operand && ((Operand) param).getName().equals(varName)) {
-                    isParameter = true;
-                    break;
-                }
-            }
-            
-            if (!isParameter && !varName.equals("this")) {
-                method.getVarTable().get(varName).setVirtualReg(localOffset + color);
+            if (!paramNames.contains(varName) && !varName.equals("this")) {
+                method.getVarTable().get(varName).setVirtualReg(localOffset + entry.getValue());
             }
         }
     }
-    
+
     /**
      * Generates a report of the register mapping for a method.
      */
     private String generateRegisterMappingReport(Method method) {
         StringBuilder report = new StringBuilder();
-        
+
         for (Map.Entry<String, Descriptor> entry : method.getVarTable().entrySet()) {
             report.append(entry.getKey())
                   .append(" -> ")
                   .append(entry.getValue().getVirtualReg())
                   .append(", ");
         }
-        
+
         // Remove the trailing comma and space
         if (report.length() > 2) {
             report.setLength(report.length() - 2);
         }
-        
+
         return report.toString();
     }
 }
