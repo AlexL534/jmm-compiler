@@ -48,7 +48,6 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         addVisit(METHOD_CALL, this::visitMethodCall);
         addVisit(NEW_OBJECT, this::visitNewObject);
         addVisit(UNARY_OP, this::visitUnaryOp);
-        addVisit(ASSIGN_STMT, this::visitAssignment);
 
         setDefaultVisit(this::defaultVisit);
     }
@@ -317,36 +316,6 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         }
     }
 
-    private OllirExprResult visitAssignment(JmmNode node, Void unused) {
-        JmmNode lhs = node.getChild(0);
-        JmmNode rhs = node.getChild(1);
-
-        OllirExprResult lhsResult = visit(lhs, null);
-        OllirExprResult rhsResult = visit(rhs, null);
-
-        StringBuilder computation = new StringBuilder();
-        computation.append(lhsResult.getComputation());
-        computation.append(rhsResult.getComputation());
-
-        String varName = lhs.hasAttribute("name") ? lhs.get("name") : lhs.get("value");
-        boolean isField = isClassField(varName);
-
-        Type type = types.getExprType(lhs);
-        String ollirType = ollirTypes.toOllirType(type);
-
-        if (isField) {
-            computation.append("putfield(this, ")
-                    .append(varName).append(ollirType)
-                    .append(", ").append(rhsResult.getCode()).append(").V;\n");
-        } else {
-            computation.append(lhsResult.getCode())
-                    .append(" :=.").append(ollirType)
-                    .append(" ").append(rhsResult.getCode()).append(";\n");
-        }
-
-        return new OllirExprResult("", computation.toString());
-    }
-
     private boolean isClassField(String varName) {
         if (currentMethod != null) {
             if (table.getParameters(currentMethod).stream().anyMatch(param -> param.getName().equals(varName))) {
@@ -385,7 +354,6 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
      * @return
      */
     private OllirExprResult defaultVisit(JmmNode node, Void unused) {
-
         for (var child : node.getChildren()) {
             visit(child);
         }
