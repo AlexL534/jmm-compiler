@@ -66,7 +66,6 @@ public class TypeUtils {
         }
     }
 
-
     /**
      * Gets the {@link Type} of an arbitrary expression.
      *
