@@ -22,7 +22,6 @@ public class JmmAnalysisImpl implements JmmAnalysis {
 
     /**
      * Analysis passes that will be applied to the AST.
-     *
      * @param table
      * @return
      */

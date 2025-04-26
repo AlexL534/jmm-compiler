@@ -7,7 +7,6 @@ import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp2025.ast.Kind;
 import pt.up.fe.comp2025.ast.TypeUtils;
 
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static pt.up.fe.comp2025.ast.Kind.*;
@@ -69,7 +68,6 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     private String visitVarDecl(JmmNode node, Void unused) {
         StringBuilder code = new StringBuilder();
 
-        String a = node.getParent().getKind();
         //check if is field
         if(!node.getParent().getKind().equals("ClassDef")) {
             return "";
@@ -107,7 +105,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
             }
         }
 
-        return importStmt.toString() + SPACE + END_STMT;
+        return importStmt + SPACE + END_STMT;
     }
 
     private String visitArrayCreation(JmmNode node, Void unused) {
@@ -122,20 +120,15 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         String firstChildCode = exprVisitor.visit(node.getChild(0)).getCode();
         String secondChildCode = exprVisitor.visit(node.getChild(1)).getCode();
         secondChildCode += END_STMT;
-        if(firstChildCode.equals("")){
+        if(firstChildCode.isEmpty()){
             firstChildCode = visit(node.getChild(0));
         }
-        if(secondChildCode.equals("")){
-            secondChildCode = visit(node.getChild(1));
-        }
 
-        StringBuilder res = new StringBuilder();
+        String res = varName + "[" + firstChildCode + "]" + ".i32" + SPACE +
+                ASSIGN + ".i32" + SPACE +
+                secondChildCode.trim();
 
-        res.append(varName).append("[").append(firstChildCode).append("]").append(".i32").append(SPACE)
-                .append(ASSIGN).append(".i32").append(SPACE)
-                .append(secondChildCode.trim());
-
-        return res.toString();
+        return res;
     }
 
     private String visitAssignStmt(JmmNode node, Void unused) {
@@ -286,7 +279,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
             code.append(name);
         }
 
-        code.append("(" + listParamsCode + ")");
+        code.append("(").append(listParamsCode).append(")");
 
         // return type
         var returnType = table.getReturnType(node.get("name"));
@@ -305,7 +298,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
                         .map(this::visit)
                 .collect(Collectors.joining("\n   ", "   ", ""));
 
-       if(returnCode.trim().equals("") && stmtsCode.trim().endsWith(":")){
+       if(returnCode.trim().isEmpty() && stmtsCode.trim().endsWith(":")){
            //end if stmt needs the return stmt even when the return type is void
             returnCode = "ret" + ollirTypes.toOllirType(TypeUtils.newVoidType()) + END_STMT;
         }
@@ -391,7 +384,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
             else{
                 //in this case, we need to visit the node that wil create a temporary variable and then insert that temporary variable into the method call
                 var result = exprVisitor.visit(child);
-                methodCall = new StringBuilder(result.getComputation() + methodCall.toString());
+                methodCall = new StringBuilder(result.getComputation() + methodCall);
                 methodCall.append(result.getCode());
             }
 
@@ -420,7 +413,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         
         code.append(conditionResult.getComputation());
         
-        code.append("if (" + conditionResult.getCode() + ") goto " + elseLabel + END_STMT);
+        code.append("if (").append(conditionResult.getCode()).append(") goto ").append(elseLabel).append(END_STMT);
         
         if (node.getNumChildren() > 1) {
             JmmNode thenNode = node.getChild(1);
@@ -428,9 +421,9 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
             code.append(thenCode);
         }
         
-        code.append("goto " + ifEndLabel + END_STMT);
+        code.append("goto ").append(ifEndLabel).append(END_STMT);
         
-        code.append(elseLabel + ":" + NL);
+        code.append(elseLabel).append(":").append(NL);
 
         if (node.getNumChildren() > 2) {
             JmmNode elseNode = node.getChild(2);
@@ -438,7 +431,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
             code.append(elseCode);
         }
         
-        code.append(ifEndLabel + ":" + NL);
+        code.append(ifEndLabel).append(":").append(NL);
         
         return code.toString();
     }
@@ -450,17 +443,17 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         String whileBodyLabel = "while_body_" + ollirTypes.nextTemp("while");
         String whileEndLabel = "while_end_" + ollirTypes.nextTemp("while");
         
-        code.append(whileCondLabel + ":" + NL);
+        code.append(whileCondLabel).append(":").append(NL);
         
         JmmNode conditionNode = node.getChild(0);
         var conditionResult = exprVisitor.visit(conditionNode);
         
         code.append(conditionResult.getComputation());
         
-        code.append("if (" + conditionResult.getCode() + ") goto " + whileBodyLabel + END_STMT);
-        code.append("goto " + whileEndLabel + END_STMT);
+        code.append("if (").append(conditionResult.getCode()).append(") goto ").append(whileBodyLabel).append(END_STMT);
+        code.append("goto ").append(whileEndLabel).append(END_STMT);
         
-        code.append(whileBodyLabel + ":" + NL);
+        code.append(whileBodyLabel).append(":").append(NL);
         
         if (node.getNumChildren() > 1) {
             JmmNode bodyNode = node.getChild(1);
@@ -468,9 +461,9 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
             code.append(bodyCode);
         }
         
-        code.append("goto " + whileCondLabel + END_STMT);
+        code.append("goto ").append(whileCondLabel).append(END_STMT);
         
-        code.append(whileEndLabel + ":" + NL);
+        code.append(whileEndLabel).append(":").append(NL);
         
         return code.toString();
     }

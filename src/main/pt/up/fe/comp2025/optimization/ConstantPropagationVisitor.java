@@ -4,7 +4,6 @@ import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.ast.JmmNodeImpl;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -17,10 +16,6 @@ import pt.up.fe.comp2025.ast.Kind;
 public class ConstantPropagationVisitor extends AJmmVisitor<Void, Boolean> {
     
     private boolean modified = false;
-    
-    // Map of variable name to its constant value (if known)
-    // The key is the variable name, the value is the JmmNode representing the constant
-    private final Map<String, JmmNode> constantVariables = new HashMap<>();
     
     // Map to keep track of variables that are modified in loops, if-branches, etc.
     // These variables can't be fully propagated

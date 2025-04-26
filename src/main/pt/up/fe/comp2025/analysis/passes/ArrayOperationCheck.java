@@ -162,7 +162,7 @@ public class ArrayOperationCheck extends AnalysisVisitor {
         // General assignment where left side might be an array access
         if (leftNode.getKind().equals(ARRAY_SUBSCRIPT.getNodeName())) {
             // Get the array type
-            JmmNode arrayExpr = leftNode.getChildren().get(0);
+            JmmNode arrayExpr = leftNode.getChildren().getFirst();
             Type arrayType = utils.getExprType(arrayExpr);
             
             // Get the expression type

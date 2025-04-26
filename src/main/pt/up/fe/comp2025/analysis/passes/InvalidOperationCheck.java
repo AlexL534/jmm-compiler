@@ -38,27 +38,26 @@ public class InvalidOperationCheck extends AnalysisVisitor {
             );
 
             addReport(report);
-        };
+        }
         return null;
     }
 
     private boolean isOperationValid(String op, String leftType, String rightType, boolean isArrayLeft, boolean isArrayRight) {
         // Arithmetic operations: +, -, *, /
-        if (op.equals("+") || op.equals("-") || op.equals("*") || op.equals("/")) {
-            return leftType.equals("int") && rightType.equals("int") && !isArrayLeft && !isArrayRight;
-        }
+        return switch (op) {
+            case "+", "-", "*", "/" ->
+                    leftType.equals("int") && rightType.equals("int") && !isArrayLeft && !isArrayRight;
 
-        // Logical operations: &&
-        if (op.equals("&&")) {
-            return leftType.equals("boolean") && rightType.equals("boolean");
-        }
 
-        // Comparison operations: < (only valid for int types)
-        if (op.equals("<")) {
-            return leftType.equals("int") && rightType.equals("int") && !isArrayLeft && !isArrayRight;
-        }
+            // Logical operations: &&
+            case "&&" -> leftType.equals("boolean") && rightType.equals("boolean");
 
-        return false;
+
+            // Comparison operations: < (only valid for int types)
+            case "<" -> leftType.equals("int") && rightType.equals("int") && !isArrayLeft && !isArrayRight;
+            default -> false;
+        };
+
     }
 
     private Void visitBinaryOp(JmmNode node, SymbolTable table) {

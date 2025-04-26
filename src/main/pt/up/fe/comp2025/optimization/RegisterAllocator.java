@@ -263,8 +263,7 @@ public class RegisterAllocator {
         // Build edges between variables that interfere
         List<Instruction> instructions = method.getInstructions();
         for (Instruction inst : instructions) {
-            if (inst instanceof AssignInstruction) {
-                AssignInstruction assign = (AssignInstruction) inst;
+            if (inst instanceof AssignInstruction assign) {
                 Element dest = assign.getDest();
                 
                 if (!(dest instanceof Operand)) continue;
@@ -279,8 +278,7 @@ public class RegisterAllocator {
                         boolean isCopy = false;
                         String srcVar = null;
                         
-                        if (assign.getRhs() instanceof SingleOpInstruction) {
-                            SingleOpInstruction sop = (SingleOpInstruction) assign.getRhs();
+                        if (assign.getRhs() instanceof SingleOpInstruction sop) {
                             if (sop.getSingleOperand() instanceof Operand) {
                                 srcVar = ((Operand) sop.getSingleOperand()).getName();
                                 isCopy = true;
@@ -304,9 +302,8 @@ public class RegisterAllocator {
      */
     private void findDefinitionsAndUses(Instruction inst, Set<String> defined, Set<String> used) {
         // Handle different instruction types
-        if (inst instanceof AssignInstruction) {
-            AssignInstruction assign = (AssignInstruction) inst;
-            
+        if (inst instanceof AssignInstruction assign) {
+
             // The LHS is defined
             if (assign.getDest() instanceof Operand) {
                 String varName = ((Operand) assign.getDest()).getName();
@@ -317,10 +314,9 @@ public class RegisterAllocator {
             
             // Extract variables used in the RHS
             collectUsedVarsFromInstruction(assign.getRhs(), used);
-        } else if (inst instanceof CallInstruction) {
+        } else if (inst instanceof CallInstruction call) {
             // Method calls use their arguments
-            CallInstruction call = (CallInstruction) inst;
-            
+
             // If instance method, the caller is used
             if (call.getCaller() != null) {
                 collectUsedVarsFromElement(call.getCaller(), used);
@@ -330,29 +326,25 @@ public class RegisterAllocator {
             for (Element arg : call.getArguments()) {
                 collectUsedVarsFromElement(arg, used);
             }
-        } else if (inst instanceof ReturnInstruction) {
+        } else if (inst instanceof ReturnInstruction ret) {
             // Return statements use their operand (if any)
-            ReturnInstruction ret = (ReturnInstruction) inst;
             if (ret.hasReturnValue()) {
                 collectUsedVarsFromElement(ret.getOperand().get(), used);
             }
-        } else if (inst instanceof CondBranchInstruction) {
+        } else if (inst instanceof CondBranchInstruction branch) {
             // Conditional branches use their condition operands
-            CondBranchInstruction branch = (CondBranchInstruction) inst;
             for (Element operand : branch.getOperands()) {
                 collectUsedVarsFromElement(operand, used);
             }
-        } else if (inst instanceof PutFieldInstruction) {
+        } else if (inst instanceof PutFieldInstruction put) {
             // PutField uses the object and the value
-            PutFieldInstruction put = (PutFieldInstruction) inst;
             for (Element operand : put.getOperands()) {
                 collectUsedVarsFromElement(operand, used);
             }
-        } else if (inst instanceof GetFieldInstruction) {
+        } else if (inst instanceof GetFieldInstruction get) {
             // GetField uses the object
-            GetFieldInstruction get = (GetFieldInstruction) inst;
             if (!get.getOperands().isEmpty()) {
-                collectUsedVarsFromElement(get.getOperands().get(0), used);
+                collectUsedVarsFromElement(get.getOperands().getFirst(), used);
             }
         }
         
@@ -365,26 +357,21 @@ public class RegisterAllocator {
      * Collect variables used in an instruction.
      */
     private void collectUsedVarsFromInstruction(Instruction inst, Set<String> used) {
-        if (inst instanceof SingleOpInstruction) {
-            SingleOpInstruction sop = (SingleOpInstruction) inst;
+        if (inst instanceof SingleOpInstruction sop) {
             collectUsedVarsFromElement(sop.getSingleOperand(), used);
-        } else if (inst instanceof BinaryOpInstruction) {
-            BinaryOpInstruction bop = (BinaryOpInstruction) inst;
+        } else if (inst instanceof BinaryOpInstruction bop) {
             collectUsedVarsFromElement(bop.getLeftOperand(), used);
             collectUsedVarsFromElement(bop.getRightOperand(), used);
-        } else if (inst instanceof UnaryOpInstruction) {
-            UnaryOpInstruction uop = (UnaryOpInstruction) inst;
+        } else if (inst instanceof UnaryOpInstruction uop) {
             collectUsedVarsFromElement(uop.getOperand(), used);
-        } else if (inst instanceof CallInstruction) {
-            CallInstruction call = (CallInstruction) inst;
+        } else if (inst instanceof CallInstruction call) {
             if (call.getCaller() != null) {
                 collectUsedVarsFromElement(call.getCaller(), used);
             }
             for (Element arg : call.getArguments()) {
                 collectUsedVarsFromElement(arg, used);
             }
-        } else if (inst instanceof GetFieldInstruction) {
-            GetFieldInstruction get = (GetFieldInstruction) inst;
+        } else if (inst instanceof GetFieldInstruction get) {
             for (Element op : get.getOperands()) {
                 collectUsedVarsFromElement(op, used);
             }
@@ -400,9 +387,8 @@ public class RegisterAllocator {
             if (!varName.equals("this")) {
                 used.add(varName);
             }
-        } else if (element instanceof ArrayOperand) {
+        } else if (element instanceof ArrayOperand arrayOp) {
             // Array accesses use both the array and the index
-            ArrayOperand arrayOp = (ArrayOperand) element;
             used.add(arrayOp.getName());
             
             for (Element indexElement : arrayOp.getIndexOperands()) {
@@ -428,13 +414,11 @@ public class RegisterAllocator {
         
         // Find all simple copy operations (a = b)
         for (Instruction inst : method.getInstructions()) {
-            if (inst instanceof AssignInstruction) {
-                AssignInstruction assign = (AssignInstruction) inst;
-                
+            if (inst instanceof AssignInstruction assign) {
+
                 if (assign.getDest() instanceof Operand &&
-                    assign.getRhs() instanceof SingleOpInstruction) {
-                    
-                    SingleOpInstruction sop = (SingleOpInstruction) assign.getRhs();
+                        assign.getRhs() instanceof SingleOpInstruction sop) {
+
                     if (sop.getSingleOperand() instanceof Operand) {
                         String destVar = ((Operand) assign.getDest()).getName();
                         String srcVar = ((Operand) sop.getSingleOperand()).getName();
@@ -485,28 +469,25 @@ public class RegisterAllocator {
      */
     private boolean isUsedOnlyInCopies(Method method, String varName) {
         for (Instruction inst : method.getInstructions()) {
-            if (inst instanceof AssignInstruction) {
-                AssignInstruction assign = (AssignInstruction) inst;
-                
+            if (inst instanceof AssignInstruction assign) {
+
                 // Check usage as destination (LHS)
                 if (assign.getDest() instanceof Operand && 
                     ((Operand) assign.getDest()).getName().equals(varName)) {
                     
                     // If it's assigned something other than a simple variable, it's not only in copies
-                    if (!(assign.getRhs() instanceof SingleOpInstruction)) {
+                    if (!(assign.getRhs() instanceof SingleOpInstruction sop)) {
                         return false;
                     }
-                    
-                    SingleOpInstruction sop = (SingleOpInstruction) assign.getRhs();
+
                     if (!(sop.getSingleOperand() instanceof Operand)) {
                         return false;
                     }
                 }
                 
                 // Check usage on RHS
-                if (assign.getRhs() instanceof SingleOpInstruction) {
-                    SingleOpInstruction sop = (SingleOpInstruction) assign.getRhs();
-                    
+                if (assign.getRhs() instanceof SingleOpInstruction sop) {
+
                     if (sop.getSingleOperand() instanceof Operand && 
                         ((Operand) sop.getSingleOperand()).getName().equals(varName)) {
                         // Used as source in a copy - check that LHS is a simple variable

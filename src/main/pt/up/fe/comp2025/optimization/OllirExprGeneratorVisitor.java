@@ -152,7 +152,7 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
             else{
                 //in this case, we need to visit the node that wil create a temporary variable and then insert that temporary variable into the method call
                 var result = visit(child);
-                methodCall = new StringBuilder(result.getComputation() + methodCall.toString());
+                methodCall = new StringBuilder(result.getComputation() + methodCall);
                 methodCall.append(result.getCode());
             }
 
@@ -175,7 +175,7 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
 
         computation.append(tempVar).append(SPACE)
                 .append(ASSIGN).append(funcType).append(SPACE)
-                .append(methodCall.toString())
+                .append(methodCall)
                 .append(END_STMT);
 
         return new OllirExprResult(tempVar, computation);

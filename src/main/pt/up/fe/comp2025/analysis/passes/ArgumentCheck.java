@@ -83,7 +83,7 @@ public class ArgumentCheck extends AnalysisVisitor {
             return null;
         }
 
-        Symbol param = parameters.get(0);
+        Symbol param = parameters.getFirst();
         if(!param.getType().getName().equals("String") || !param.getType().isArray()){
             addReport(Report.newError(
                     Stage.SEMANTIC,
@@ -193,7 +193,7 @@ public class ArgumentCheck extends AnalysisVisitor {
             if (childType == null) continue; // Skip if we can't determine type
 
             Symbol argType;
-            //check if i is bigger than the argument list (only useful in varargs)
+            //check if I is bigger than the argument list (only useful in varargs)
             if (arguments.size() <= i) {
                 // For varargs, use the last parameter
                 argType = arguments.getLast();

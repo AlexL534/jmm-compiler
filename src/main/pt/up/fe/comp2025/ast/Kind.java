@@ -9,7 +9,6 @@ import java.util.List;
 
 /**
  * Enum that mirrors the nodes that are supported by the AST.
- *
  * This enum allows to handle nodes in a safer and more flexible way that using strings with the names of the nodes.
  */
 public enum Kind {
@@ -54,11 +53,11 @@ public enum Kind {
 
     private final String name;
 
-    private Kind(String name) {
+    Kind(String name) {
         this.name = name;
     }
 
-    private Kind() {
+    Kind() {
         this.name = SpecsStrings.toCamelCase(name(), "_", true);
     }
 

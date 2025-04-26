@@ -44,7 +44,7 @@ public class JmmSymbolTableBuilder {
             reports.add(newError(root, "Class declaration not found"));
             throw new RuntimeException("Class declaration not found");
         }
-        var classDecl = classDeclarations.get(0);
+        var classDecl = classDeclarations.getFirst();
         var superClass = "";
         if(classDecl.hasAttribute("superClass")){
             superClass = classDecl.get("superClass");

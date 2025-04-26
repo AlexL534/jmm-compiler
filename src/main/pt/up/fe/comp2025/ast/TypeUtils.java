@@ -6,8 +6,6 @@ import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp2025.symboltable.JmmSymbolTable;
 
-import java.util.Objects;
-
 import static pt.up.fe.comp2025.ast.Kind.BINARY_EXPR;
 
 /**

@@ -4,7 +4,6 @@ import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.ast.JmmNodeImpl;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import pt.up.fe.comp2025.ast.Kind;
