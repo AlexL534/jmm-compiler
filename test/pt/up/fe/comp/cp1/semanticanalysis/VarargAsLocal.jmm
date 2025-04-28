@@ -1,0 +1,10 @@
+class VarargAsLocal {
+
+
+    public static void main(String[] args) {
+        VarargAsLocal obj;
+        int result;
+        int... a;
+        obj = new VarargAsLocal();
+    }
+}
