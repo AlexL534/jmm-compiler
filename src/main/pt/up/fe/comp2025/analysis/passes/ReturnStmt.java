@@ -29,6 +29,24 @@ public class ReturnStmt extends AnalysisVisitor {
         TypeUtils utils = new TypeUtils(table);
         utils.setCurrentMethod(currentMethod);
 
+        if (returnStmt.getNumChildren() == 0) {
+            Type methodType = table.getReturnType(currentMethod);
+
+            if (!(methodType.getName().equals("void") && !methodType.isArray())) {
+                String message = String.format("Method '%s' must return '%s', but return statement has no expression.", currentMethod, methodType.getName());
+                Report report = Report.newError(
+                        Stage.SEMANTIC,
+                        returnStmt.getLine(),
+                        returnStmt.getColumn(),
+                        message,
+                        null
+                );
+                addReport(report);
+            }
+
+            return null;
+        }
+
         Type exprType = utils.getExprType(returnStmt.getChild(0));
 
         if(exprType == null){
