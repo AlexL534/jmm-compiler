@@ -4,8 +4,6 @@ import org.junit.Test;
 import pt.up.fe.comp.TestUtils;
 import pt.up.fe.specs.util.SpecsIo;
 
-import javax.xml.transform.Result;
-
 public class SemanticAnalysisTest {
 
     @Test
@@ -406,9 +404,9 @@ public class SemanticAnalysisTest {
     }
 
     @Test
-    public void test() {
-        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/Test.jmm"));
-        TestUtils.noErrors(result);
+    public void emptyReturn() {
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/EmptyReturn.jmm"));
+        TestUtils.mustFail(result);
         System.out.println(result.getReports());
     }
 }
