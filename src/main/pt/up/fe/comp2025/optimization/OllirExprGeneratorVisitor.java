@@ -48,8 +48,36 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         addVisit(METHOD_CALL, this::visitMethodCall);
         addVisit(NEW_OBJECT, this::visitNewObject);
         addVisit(UNARY_OP, this::visitUnaryOp);
+        addVisit(ARRAY_LITERAL, this::visitArrayLiteral);
 
         setDefaultVisit(this::defaultVisit);
+    }
+
+    private OllirExprResult  visitArrayLiteral(JmmNode node, Void unused){
+        StringBuilder computation = new StringBuilder();
+
+        // Create a new temporary variable for the array
+        String arrayType = ".array.i32";
+        String temp = ollirTypes.nextTemp();
+        String tempVar = temp + arrayType;
+
+        // Generate the OLLIR code for array creation
+        computation.append(tempVar).append(SPACE)
+                .append(ASSIGN).append(arrayType).append(SPACE)
+                .append("new(array, ").append(node.getChildren().size()).append(".i32").append(")").append(arrayType)
+                .append(END_STMT);
+
+        for(int i = 0; i < node.getChildren().size(); i++){
+            var child = node.getChild(i);
+            var childExpr = visit(child);
+
+            computation.append(temp).append("[").append(i).append(".i32").append("]").append(".i32").append(SPACE)
+                    .append(ASSIGN).append(".i32").append(SPACE).append(childExpr.getCode()).append(END_STMT);
+        }
+
+
+
+        return new OllirExprResult(tempVar, computation);
     }
 
     private OllirExprResult visitArrayCreation(JmmNode node, Void unused) {
@@ -146,8 +174,9 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
             String ollirType = ollirTypes.toOllirType(nodeType);
             var kind = child.getKind();
 
-            if(Kind.fromString(kind).equals(INTEGER_LITERAL) || Kind.fromString(kind).equals(BOOLEAN_LITERAL)) {
-                args.append(child.get("value"));
+            if (Kind.fromString(kind).equals(VAR_REF_EXPR) || Kind.fromString(kind).equals(INTEGER_LITERAL) || Kind.fromString(kind).equals(BOOLEAN_LITERAL)) {
+                var result = visit(child);
+                args.append(result.getCode());
             }
             else if (Kind.fromString(kind).equals(VAR_REF_EXPR)) {
                 var result = visit(child);
