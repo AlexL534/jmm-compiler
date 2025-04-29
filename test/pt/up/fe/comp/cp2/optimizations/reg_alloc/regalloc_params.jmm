@@ -1,0 +1,15 @@
+class RegAlloc {
+    public int withParams(int p1, int p2){
+       int local;
+       int result;
+       
+       // Test that parameter registers are preserved correctly
+       local = p1 + p2;
+       result = local * 2;
+       
+       return result;
+    }
+
+    public static void main(String[] args) {
+    }
+}

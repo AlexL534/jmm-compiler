@@ -1,0 +1,16 @@
+class RegAlloc {
+    public int tooManyVars(int arg){
+       int a;
+       int b;
+       int c;
+       // All these variables must be live simultaneously
+       // so they can't share registers
+       a = 1;
+       b = 2;
+       c = 3;
+       return a + b + c; // All variables are used here
+    }
+
+    public static void main(String[] args) {
+    }
+}

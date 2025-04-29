@@ -1,0 +1,21 @@
+class RegAlloc {
+    public int interference(int arg){
+       int a;
+       int b;
+       int c;
+       int d;
+       
+       // Variables a and b interfere because they're both live at the same time
+       a = 1;
+       b = 2;
+       c = a + b; // a and b interfere here
+       
+       // d can share register with a since a is no longer used
+       d = b + c; // b and c interfere here
+       
+       return c + d;
+    }
+
+    public static void main(String[] args) {
+    }
+}

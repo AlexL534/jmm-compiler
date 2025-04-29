@@ -1,0 +1,14 @@
+class RegAlloc {
+    public int minimize(int arg){
+       int a;
+       int b;
+       int c;
+       a = 1;
+       b = 2;
+       c = a; // c can share register with a
+       return b + c;
+    }
+
+    public static void main(String[] args) {
+    }
+}
