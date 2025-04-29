@@ -291,4 +291,118 @@ public class OptimizationsTest {
         // This should throw an exception because it's impossible to use only 1 register
         OllirResult optimized = getOllirResultRegalloc(filename, configMaxRegs);
     }
+
+    @Test
+    public void regAllocArrays() {
+        String filename = "reg_alloc/regalloc_arrays.jmm";
+        int expectedTotalReg = 6; // arr, i, sum, temp, j, size parameter
+        int configMaxRegs = 3;
+
+        OllirResult original = getOllirResult(filename);
+        OllirResult optimized = getOllirResultRegalloc(filename, configMaxRegs);
+
+        int originalNumReg = CpUtils.countRegisters(CpUtils.getMethod(original, "arrayAccess"));
+        int actualNumReg = CpUtils.countRegisters(CpUtils.getMethod(optimized, "arrayAccess"));
+
+        CpUtils.assertNotEquals("Expected number of registers to change with -r flag\n\nOriginal regs:" + originalNumReg + "\nNew regs: " + actualNumReg,
+                originalNumReg, actualNumReg,
+                optimized);
+
+        CpUtils.assertTrue("Expected number of locals in 'arrayAccess' to be equal to " + expectedTotalReg + ", is " + actualNumReg,
+                actualNumReg == expectedTotalReg,
+                optimized);
+
+        var varTable = CpUtils.getMethod(optimized, "arrayAccess").getVarTable();
+        var iReg = varTable.get("i").getVirtualReg();
+        var jReg = varTable.get("j").getVirtualReg();
+        
+        // i and j should ideally share the same register since their lifetimes don't overlap
+        CpUtils.assertEquals("Expected registers of variables 'i' and 'j' to be the same since their lifetimes don't overlap", 
+                iReg, jReg, optimized);
+    }
+
+    @Test
+    public void regAllocConditional() {
+        String filename = "reg_alloc/regalloc_conditional.jmm";
+        int expectedTotalReg = 7; // arg, a, b, c, d, result, this parameter
+        int configMaxRegs = 4; 
+
+        OllirResult original = getOllirResult(filename);
+        OllirResult optimized = getOllirResultRegalloc(filename, configMaxRegs);
+
+        int originalNumReg = CpUtils.countRegisters(CpUtils.getMethod(original, "conditionalControl"));
+        int actualNumReg = CpUtils.countRegisters(CpUtils.getMethod(optimized, "conditionalControl"));
+
+        CpUtils.assertNotEquals("Expected number of registers to change with -r flag\n\nOriginal regs:" + originalNumReg + "\nNew regs: " + actualNumReg,
+                originalNumReg, actualNumReg,
+                optimized);
+
+        CpUtils.assertTrue("Expected number of locals in 'conditionalControl' to be equal to " + expectedTotalReg + ", is " + actualNumReg,
+                actualNumReg == expectedTotalReg,
+                optimized);
+
+        // Variables with non-overlapping lifetimes across different branches should ideally share registers
+        var varTable = CpUtils.getMethod(optimized, "conditionalControl").getVarTable();
+        var aReg = varTable.get("a").getVirtualReg();
+        var resultReg = varTable.get("result").getVirtualReg();
+        
+        // In a well-implemented register allocator, 'a' and 'result' could share a register
+        // as 'a' is only used before the conditional branches and 'result' only after
+        CpUtils.assertEquals("Expected variables with non-overlapping lifetimes to share registers", 
+                aReg, resultReg, optimized);
+    }
+
+    @Test
+    public void regAllocMethodCalls() {
+        String filename = "reg_alloc/regalloc_method_calls.jmm";
+        int expectedTotalReg = 6; // a, b, c, result, arg parameter, this parameter
+        int configMaxRegs = 3;
+
+        OllirResult original = getOllirResult(filename);
+        OllirResult optimized = getOllirResultRegalloc(filename, configMaxRegs);
+
+        int originalNumReg = CpUtils.countRegisters(CpUtils.getMethod(original, "methodWithCalls"));
+        int actualNumReg = CpUtils.countRegisters(CpUtils.getMethod(optimized, "methodWithCalls"));
+
+        CpUtils.assertNotEquals("Expected number of registers to change with -r flag\n\nOriginal regs:" + originalNumReg + "\nNew regs: " + actualNumReg,
+                originalNumReg, actualNumReg,
+                optimized);
+
+        CpUtils.assertTrue("Expected number of locals in 'methodWithCalls' to be equal to " + expectedTotalReg + ", is " + actualNumReg,
+                actualNumReg == expectedTotalReg,
+                optimized);
+
+        // Method calls should preserve values across calls when they are needed later
+        var varTable = CpUtils.getMethod(optimized, "methodWithCalls").getVarTable();
+        var aReg = varTable.get("a").getVirtualReg();
+        var bReg = varTable.get("b").getVirtualReg();
+        
+        // 'a' and 'b' values are both needed after method calls, they should have different registers
+        CpUtils.assertNotEquals("Expected variables 'a' and 'b' to have different registers as both are needed after method calls",
+                aReg, bReg, optimized);
+    }
+
+    @Test
+    public void regAllocSpill() {
+        String filename = "reg_alloc/regalloc_spill.jmm";
+        int expectedTotalReg = 11; // a to h, result, arg parameter, this parameter
+        int configMaxRegs = 4; // Force spilling by limiting available physical registers
+
+        OllirResult original = getOllirResult(filename);
+        OllirResult optimized = getOllirResultRegalloc(filename, configMaxRegs);
+
+        int originalNumReg = CpUtils.countRegisters(CpUtils.getMethod(original, "manyLiveVars"));
+        int actualNumReg = CpUtils.countRegisters(CpUtils.getMethod(optimized, "manyLiveVars"));
+
+        CpUtils.assertTrue("Expected number of locals in 'manyLiveVars' to be equal to " + expectedTotalReg + ", is " + actualNumReg,
+                actualNumReg == expectedTotalReg,
+                optimized);
+
+        // When multiple variables are live simultaneously but we don't have enough registers,
+        // the allocator must handle spilling correctly to preserve values
+        var method = CpUtils.getMethod(optimized, "manyLiveVars");
+        
+        // The complex expression should be present and able to return a result
+        CpUtils.assertReturnExists(method, optimized);
+    }
 }

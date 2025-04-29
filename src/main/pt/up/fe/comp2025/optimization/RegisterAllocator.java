@@ -104,27 +104,80 @@ public class RegisterAllocator {
 
         // Optimize for copy instructions to allow register sharing
         Map<String, Set<String>> copyRelations = findCopyRelations(method);
-        optimizeForCopyChains(interferenceGraph, copyRelations);
+        
+        // Find transitive copy chains to maximize register sharing
+        Map<String, Set<String>> copyChains = buildTransitiveCopyChains(copyRelations);
 
-        // Color graph using minimum colors
-        Map<String, Integer> colorAssignment = colorGraph(interferenceGraph, copyRelations);
+        // Color graph prioritizing register sharing between variables in copy chains
+        Map<String, Integer> colorAssignment = colorGraphMinimized(interferenceGraph, copyChains);
 
         // Update the variable table
         updateVarTable(method, colorAssignment);
     }
     
     /**
+     * Colors the interference graph to minimize the number of colors used.
+     * Specifically optimized for the case where maxRegisters = 0.
+     */
+    private Map<String, Integer> colorGraphMinimized(Map<String, Set<String>> interferenceGraph, 
+                                                   Map<String, Set<String>> copyChains) {
+        Map<String, Integer> colorAssignment = new HashMap<>();
+        
+        // Group variables that can potentially share the same register
+        // based on copy chains and non-interference
+        List<Set<String>> registerGroups = new ArrayList<>();
+        Set<String> processedVars = new HashSet<>();
+        
+        // Process variables in order of their copy chain size (largest first)
+        // to maximize register sharing
+        List<String> sortedVars = new ArrayList<>(interferenceGraph.keySet());
+        sortedVars.sort((v1, v2) -> Integer.compare(copyChains.get(v2).size(), copyChains.get(v1).size()));
+        
+        for (String var : sortedVars) {
+            if (processedVars.contains(var)) continue;
+            
+            // Create a new register group starting with this variable
+            Set<String> group = new HashSet<>();
+            group.add(var);
+            processedVars.add(var);
+            
+            // Try to add all variables from its copy chain that don't interfere
+            for (String related : copyChains.get(var)) {
+                if (!related.equals(var) && !processedVars.contains(related)) {
+                    boolean canAdd = true;
+                    
+                    // Check if this variable interferes with any variable already in the group
+                    for (String groupVar : group) {
+                        if (interferenceGraph.get(groupVar).contains(related)) {
+                            canAdd = false;
+                            break;
+                        }
+                    }
+                    
+                    if (canAdd) {
+                        group.add(related);
+                        processedVars.add(related);
+                    }
+                }
+            }
+            
+            registerGroups.add(group);
+        }
+        
+        // Now color each group with a unique color
+        for (int i = 0; i < registerGroups.size(); i++) {
+            for (String var : registerGroups.get(i)) {
+                colorAssignment.put(var, i);
+            }
+        }
+        
+        return colorAssignment;
+    }
+    
+    /**
      * Limits the number of registers used by the method.
      */
     private void limitRegisters(Method method, int maxRegisters) {
-        // Special handling for the copy chains test case
-        String methodName = method.getMethodName();
-        if (maxRegisters == 1 && (methodName.equals("copyChain") || methodName.equals("copyChains"))) {
-            // For this specific test case, assign all vars to register 1 except for parameters
-            handleSpecialCopyChainCase(method);
-            return;
-        }
-        
         // Analyze method to get liveness information
         Map<Instruction, Set<String>> liveIn = new HashMap<>();
         Map<Instruction, Set<String>> liveOut = new HashMap<>();
@@ -147,59 +200,6 @@ public class RegisterAllocator {
             // Find the minimum required number of registers and throw an exception
             int minRequired = findMinimumRequiredRegisters(interferenceGraph, copyRelations);
             throw new RegisterAllocationException(minRequired);
-        }
-    }
-    
-    /**
-     * Special handler for the copy chains test case.
-     * This test requires all variables to be assigned to the same register.
-     */
-    private void handleSpecialCopyChainCase(Method method) {
-        // For method "copyChains" with 1 register, we force all local variables into reg 1
-        
-        // Get parameters and assign them to reg 0
-        List<Element> params = method.getParams();
-        Set<String> paramNames = params.stream()
-                .filter(Operand.class::isInstance)
-                .map(param -> ((Operand) param).getName())
-                .collect(Collectors.toSet());
-        
-        int paramReg = 0;
-        if (!method.isStaticMethod() && method.getVarTable().containsKey("this")) {
-            method.getVarTable().get("this").setVirtualReg(paramReg++);
-        }
-        
-        // Assign parameters
-        for (Element param : params) {
-            if (param instanceof Operand) {
-                String paramName = ((Operand) param).getName();
-                if (!paramName.equals("this")) {
-                    method.getVarTable().get(paramName).setVirtualReg(paramReg++);
-                }
-            }
-        }
-        
-        // Find all variables involved in copy chains
-        Map<String, Set<String>> copyRelations = findCopyRelations(method);
-        Set<String> copyChainVars = new HashSet<>();
-        for (String var : copyRelations.keySet()) {
-            if (!copyRelations.get(var).isEmpty()) {
-                copyChainVars.add(var);
-                copyChainVars.addAll(copyRelations.get(var));
-            }
-        }
-        
-        // Force a single register (reg 0) for all local variables in copy chains
-        for (String varName : method.getVarTable().keySet()) {
-            if (!varName.equals("this") && !paramNames.contains(varName)) {
-                if (copyChainVars.contains(varName)) {
-                    // We want copy chain variables to share the same register
-                    method.getVarTable().get(varName).setVirtualReg(paramReg);
-                } else {
-                    // Any other local variable gets register paramReg
-                    method.getVarTable().get(varName).setVirtualReg(paramReg);
-                }
-            }
         }
     }
     
@@ -552,36 +552,54 @@ public class RegisterAllocator {
     }
 
     /**
-     * Find direct copy relations between variables.
+     * Finds copy relations between variables (a = b).
+     * These relations are important because variables in copy relations
+     * can potentially share registers if they don't interfere.
      */
     private Map<String, Set<String>> findCopyRelations(Method method) {
         Map<String, Set<String>> copyRelations = new HashMap<>();
         
-        // Initialize map for all variables in the method
+        // Initialize copy relations for all variables
         for (String varName : method.getVarTable().keySet()) {
-            if (!varName.equals("this")) {
-                copyRelations.put(varName, new HashSet<>());
-            }
+            copyRelations.put(varName, new HashSet<>());
         }
         
-        // Find copy instructions (a = b)
+        // Scan instructions for copy operations
         for (Instruction inst : method.getInstructions()) {
             if (inst instanceof AssignInstruction assign) {
-                if (assign.getDest() instanceof Operand && 
-                    assign.getRhs() instanceof SingleOpInstruction sop &&
-                    sop.getSingleOperand() instanceof Operand) {
+                Element dest = assign.getDest();
+                
+                // Skip if destination is not a simple variable (e.g. array access)
+                if (!(dest instanceof Operand) || dest instanceof ArrayOperand) {
+                    continue;
+                }
+                
+                String destVar = ((Operand) dest).getName();
+                
+                // Skip if destination is 'this' or a field
+                if (destVar.equals("this")) {
+                    continue;
+                }
+                
+                // Check if this is a simple copy instruction: a = b
+                if (assign.getRhs() instanceof SingleOpInstruction sop) {
+                    Element srcElement = sop.getSingleOperand();
                     
-                    String destVar = ((Operand) assign.getDest()).getName();
-                    String srcVar = ((Operand) sop.getSingleOperand()).getName();
-                    
-                    // Skip 'this' and check both variables are in our maps
-                    if (!destVar.equals("this") && !srcVar.equals("this") &&
-                        copyRelations.containsKey(destVar) && copyRelations.containsKey(srcVar)) {
-                        
-                        // Record that these variables are related by a copy
-                        copyRelations.get(destVar).add(srcVar);
-                        copyRelations.get(srcVar).add(destVar);
+                    // Skip if source is not a simple variable
+                    if (!(srcElement instanceof Operand) || srcElement instanceof ArrayOperand) {
+                        continue;
                     }
+                    
+                    String srcVar = ((Operand) srcElement).getName();
+                    
+                    // Skip if source is 'this'
+                    if (srcVar.equals("this")) {
+                        continue;
+                    }
+                    
+                    // Add copy relation
+                    copyRelations.get(destVar).add(srcVar);
+                    copyRelations.get(srcVar).add(destVar);
                 }
             }
         }
@@ -590,111 +608,22 @@ public class RegisterAllocator {
     }
     
     /**
-     * Apply optimizations for copy chains like a = b, b = c.
-     * This can help reduce unnecessary interferences in the graph.
+     * Optimizes the interference graph based on copy relations.
+     * Variables in copy relations that don't interfere can potentially share registers.
      */
-    private void optimizeForCopyChains(Map<String, Set<String>> interferenceGraph, 
-                                       Map<String, Set<String>> copyRelations) {
-        // First build transitive copy chains to find related variables
-        Map<String, Set<String>> copyChains = buildTransitiveCopyChains(copyRelations);
-        
-        // Now aggressively remove interferences between variables in each copy chain
-        for (String var : interferenceGraph.keySet()) {
-            Set<String> chain = copyChains.get(var);
-            
-            for (String var1 : chain) {
-                for (String var2 : chain) {
-                    if (!var1.equals(var2) && interferenceGraph.get(var1).contains(var2)) {
-                        // Remove interference between variables in the same copy chain
-                        interferenceGraph.get(var1).remove(var2);
-                        interferenceGraph.get(var2).remove(var1);
-                    }
-                }
-            }
-        }
-        
-        // Extra: Identify dominant variables in copy chains
-        // These are variables that are the source of many copies
-        Map<String, Integer> copyOutDegree = new HashMap<>();
-        for (String var : interferenceGraph.keySet()) {
-            copyOutDegree.put(var, 0);
-        }
-        
-        // Count how many times each variable is the source in copy operations
-        for (Instruction inst : findAllInstructions()) {
-            if (inst instanceof AssignInstruction assign) {
-                if (assign.getDest() instanceof Operand && 
-                    assign.getRhs() instanceof SingleOpInstruction sop &&
-                    sop.getSingleOperand() instanceof Operand) {
-                    
-                    String srcVar = ((Operand) sop.getSingleOperand()).getName();
-                    if (!srcVar.equals("this") && copyOutDegree.containsKey(srcVar)) {
-                        copyOutDegree.put(srcVar, copyOutDegree.get(srcVar) + 1);
-                    }
-                }
-            }
-        }
-        
-        // Prioritize copies from high-out-degree variables
-        // This helps maximize the potential for register sharing
-        for (String var : interferenceGraph.keySet()) {
-            if (copyOutDegree.get(var) > 1) {
-                // For variables that are the source of multiple copies,
-                // try to further reduce their interferences
-                for (String copied : copyChains.get(var)) {
-                    if (copied.equals(var)) continue;
-                    
-                    // Aggressive interference reduction for key copy sources
-                    interferenceGraph.get(var).removeAll(copyChains.get(copied));
-                    interferenceGraph.get(copied).removeAll(copyChains.get(var));
-                }
-            }
-        }
-    }
-    
-    /**
-     * Build transitive closure of copy chains
-     */
-    private Map<String, Set<String>> buildTransitiveCopyChains(Map<String, Set<String>> copyRelations) {
-        Map<String, Set<String>> result = new HashMap<>();
-        
-        // Initialize with direct copy relations
+    private void optimizeForCopyChains(Map<String, Set<String>> interferenceGraph, Map<String, Set<String>> copyRelations) {
+        // For each pair of variables in a copy relation
         for (String var : copyRelations.keySet()) {
-            result.put(var, new HashSet<>(copyRelations.get(var)));
-            result.get(var).add(var); // Include self
-        }
-        
-        // Compute transitive closure (modified Floyd-Warshall)
-        boolean changed;
-        do {
-            changed = false;
-            
-            for (String var : result.keySet()) {
-                Set<String> currentRelations = new HashSet<>(result.get(var));
+            for (String copyVar : copyRelations.get(var)) {
+                // If they don't interfere, we prefer them to be allocated to the same register
+                // No need to modify the interference graph, as the graph coloring algorithm
+                // will handle this preference during coloring
                 
-                // For each related variable, add its relations
-                for (String related : currentRelations) {
-                    for (String transitive : result.get(related)) {
-                        if (!result.get(var).contains(transitive)) {
-                            result.get(var).add(transitive);
-                            changed = true;
-                        }
-                    }
-                }
+                // We could potentially add a "preference" edge in a separate graph or adjust
+                // the coloring heuristics, but for this implementation we'll rely on the 
+                // ordering of variables in the coloring algorithm
             }
-        } while (changed);
-        
-        return result;
-    }
-    
-    /**
-     * Get all instructions from all methods (for analysis purposes)
-     */
-    private List<Instruction> findAllInstructions() {
-        // This is a stub that would need to be implemented based on 
-        // the available context - we'll use an empty list since we don't need
-        // it for the specific improvements we're making
-        return new ArrayList<>();
+        }
     }
     
     /**
@@ -980,5 +909,45 @@ public class RegisterAllocator {
         }
         
         return report.toString();
+    }
+
+    /**
+     * Builds transitive copy chains from direct copy relations.
+     * This helps identify groups of variables that can potentially share registers.
+     */
+    private Map<String, Set<String>> buildTransitiveCopyChains(Map<String, Set<String>> copyRelations) {
+        Map<String, Set<String>> copyChains = new HashMap<>();
+        
+        // Start with direct copy relations
+        for (String var : copyRelations.keySet()) {
+            copyChains.put(var, new HashSet<>());
+            copyChains.get(var).add(var);  // Include self in the chain
+            copyChains.get(var).addAll(copyRelations.get(var));
+        }
+        
+        // Repeatedly extend chains until no more changes
+        boolean changed;
+        do {
+            changed = false;
+            
+            // For each variable's chain
+            for (String var : copyChains.keySet()) {
+                int sizeBefore = copyChains.get(var).size();
+                
+                // For each direct copy relation
+                for (String related : new HashSet<>(copyChains.get(var))) {
+                    // Add all of related's copy chain to var's chain
+                    if (copyChains.containsKey(related)) {
+                        copyChains.get(var).addAll(copyChains.get(related));
+                    }
+                }
+                
+                if (copyChains.get(var).size() > sizeBefore) {
+                    changed = true;
+                }
+            }
+        } while (changed);
+        
+        return copyChains;
     }
 }
