@@ -1,5 +1,5 @@
 class RegAlloc {
-    public int copyChains(int arg) {
+    public int copyChain(int arg) {
         int a;
         int b;
         int c;

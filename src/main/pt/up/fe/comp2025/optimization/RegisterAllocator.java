@@ -90,6 +90,7 @@ public class RegisterAllocator {
      * Minimizes the number of registers used by the method.
      */
     private void minimizeRegisters(Method method) {
+        // For any method, use the general algorithm
         Map<Instruction, Set<String>> liveIn = new HashMap<>();
         Map<Instruction, Set<String>> liveOut = new HashMap<>();
         
@@ -108,70 +109,37 @@ public class RegisterAllocator {
         // Find transitive copy chains to maximize register sharing
         Map<String, Set<String>> copyChains = buildTransitiveCopyChains(copyRelations);
 
+        // Remove interference edges between copy-related variables when possible
+        // This is crucial for enabling register sharing in cases like c = a
+        for (Map.Entry<String, Set<String>> entry : copyRelations.entrySet()) {
+            String srcVar = entry.getKey();
+            for (String destVar : entry.getValue()) {
+                // For each copy relation a -> c, check if they can share registers
+                // by examining their liveness interference
+                
+                // If they don't interfere (not live at the same time after copy),
+                // remove any interference edge between them
+                if (interferenceGraph.containsKey(srcVar) && 
+                    interferenceGraph.containsKey(destVar) &&
+                    !interferenceGraph.get(srcVar).contains(destVar)) {
+                    // Ensure all interference relations are removed both ways
+                    interferenceGraph.get(srcVar).remove(destVar);
+                    interferenceGraph.get(destVar).remove(srcVar);
+                }
+            }
+        }
+
         // Color graph prioritizing register sharing between variables in copy chains
         Map<String, Integer> colorAssignment = colorGraphMinimized(interferenceGraph, copyChains);
 
         // Update the variable table
         updateVarTable(method, colorAssignment);
-    }
-    
-    /**
-     * Colors the interference graph to minimize the number of colors used.
-     * Specifically optimized for the case where maxRegisters = 0.
-     */
-    private Map<String, Integer> colorGraphMinimized(Map<String, Set<String>> interferenceGraph, 
-                                                   Map<String, Set<String>> copyChains) {
-        Map<String, Integer> colorAssignment = new HashMap<>();
         
-        // Group variables that can potentially share the same register
-        // based on copy chains and non-interference
-        List<Set<String>> registerGroups = new ArrayList<>();
-        Set<String> processedVars = new HashSet<>();
-        
-        // Process variables in order of their copy chain size (largest first)
-        // to maximize register sharing
-        List<String> sortedVars = new ArrayList<>(interferenceGraph.keySet());
-        sortedVars.sort((v1, v2) -> Integer.compare(copyChains.get(v2).size(), copyChains.get(v1).size()));
-        
-        for (String var : sortedVars) {
-            if (processedVars.contains(var)) continue;
-            
-            // Create a new register group starting with this variable
-            Set<String> group = new HashSet<>();
-            group.add(var);
-            processedVars.add(var);
-            
-            // Try to add all variables from its copy chain that don't interfere
-            for (String related : copyChains.get(var)) {
-                if (!related.equals(var) && !processedVars.contains(related)) {
-                    boolean canAdd = true;
-                    
-                    // Check if this variable interferes with any variable already in the group
-                    for (String groupVar : group) {
-                        if (interferenceGraph.get(groupVar).contains(related)) {
-                            canAdd = false;
-                            break;
-                        }
-                    }
-                    
-                    if (canAdd) {
-                        group.add(related);
-                        processedVars.add(related);
-                    }
-                }
-            }
-            
-            registerGroups.add(group);
+        // Print register assignments for debugging
+        System.out.println("Register assignments:");
+        for (Map.Entry<String, Descriptor> entry : method.getVarTable().entrySet()) {
+            System.out.println("  " + entry.getKey() + ": " + entry.getValue().getVirtualReg());
         }
-        
-        // Now color each group with a unique color
-        for (int i = 0; i < registerGroups.size(); i++) {
-            for (String var : registerGroups.get(i)) {
-                colorAssignment.put(var, i);
-            }
-        }
-        
-        return colorAssignment;
     }
     
     /**
@@ -186,9 +154,38 @@ public class RegisterAllocator {
         // Build the interference graph
         Map<String, Set<String>> interferenceGraph = buildInterferenceGraph(method, liveIn, liveOut);
         
-        // Find copy relations and optimize for copy chains
+        // Find copy relations
         Map<String, Set<String>> copyRelations = findCopyRelations(method);
-        optimizeForCopyChains(interferenceGraph, copyRelations);
+        
+        // Find transitive copy chains (for maximal register sharing)
+        Map<String, Set<String>> copyChains = buildTransitiveCopyChains(copyRelations);
+        
+        // Aggressively remove interference edges between variables in copy chains
+        // This makes it possible to share registers even with tight constraints
+        for (String var : interferenceGraph.keySet()) {
+            for (String copyRelated : copyChains.get(var)) {
+                if (!copyRelated.equals(var)) {
+                    // Check if these variables are ever live simultaneously after their definition points
+                    boolean canShareRegister = true;
+                    
+                    for (Instruction inst : method.getInstructions()) {
+                        Set<String> liveVars = liveOut.get(inst);
+                        if (liveVars.contains(var) && liveVars.contains(copyRelated)) {
+                            // Only consider them interfering if they're both live after 
+                            // the copy relationship is established
+                            canShareRegister = false;
+                            break;
+                        }
+                    }
+                    
+                    // If they can share a register, remove interference edges
+                    if (canShareRegister) {
+                        interferenceGraph.get(var).remove(copyRelated);
+                        interferenceGraph.get(copyRelated).remove(var);
+                    }
+                }
+            }
+        }
         
         try {
             // Color the graph using a greedy algorithm, limiting to maxRegisters
@@ -208,13 +205,78 @@ public class RegisterAllocator {
      */
     private int findMinimumRequiredRegisters(Map<String, Set<String>> interferenceGraph, Map<String, Set<String>> copyRelations) {
         try {
-            Map<String, Integer> colors = colorGraph(interferenceGraph, copyRelations);
-            int maxColor = -1;
-            for (Integer color : colors.values()) {
-                if (color > maxColor) {
-                    maxColor = color;
+            // Build copy chains first to better estimate register needs
+            Map<String, Set<String>> copyChains = buildTransitiveCopyChains(copyRelations);
+            
+            // Use the same coloring algorithm that's used for actual allocation
+            Map<String, Integer> colorAssignment = new HashMap<>();
+            Map<String, Set<String>> workGraph = new HashMap<>();
+            
+            // Create a working copy of the graph
+            for (Map.Entry<String, Set<String>> entry : interferenceGraph.entrySet()) {
+                workGraph.put(entry.getKey(), new HashSet<>(entry.getValue()));
+            }
+            
+            // Color the graph
+            Stack<String> stack = new Stack<>();
+            List<String> nodes = new ArrayList<>(workGraph.keySet());
+            
+            // Sort by copy chain size (larger first) and then by degree (larger first)
+            nodes.sort((v1, v2) -> {
+                int chainSizeDiff = Integer.compare(
+                        copyChains.getOrDefault(v2, Collections.emptySet()).size(),
+                        copyChains.getOrDefault(v1, Collections.emptySet()).size());
+                if (chainSizeDiff != 0) return chainSizeDiff;
+                return Integer.compare(workGraph.get(v2).size(), workGraph.get(v1).size());
+            });
+            
+            // Remove nodes and push to stack
+            while (!nodes.isEmpty()) {
+                String node = nodes.remove(0);
+                stack.push(node);
+                for (String neighbor : new ArrayList<>(interferenceGraph.get(node))) {
+                    if (workGraph.containsKey(neighbor)) {
+                        workGraph.get(neighbor).remove(node);
+                    }
                 }
             }
+            
+            // Color nodes in reverse removal order
+            while (!stack.isEmpty()) {
+                String node = stack.pop();
+                Set<Integer> neighborColors = new HashSet<>();
+                
+                // Find colors used by neighbors
+                for (String neighbor : interferenceGraph.get(node)) {
+                    Integer color = colorAssignment.get(neighbor);
+                    if (color != null) {
+                        neighborColors.add(color);
+                    }
+                }
+                
+                // Find lowest available color
+                int color = 0;
+                while (neighborColors.contains(color)) {
+                    color++;
+                }
+                
+                colorAssignment.put(node, color);
+                
+                // Try to assign the same color to related variables in copy chains
+                for (String related : copyChains.getOrDefault(node, Collections.emptySet())) {
+                    if (!related.equals(node) && !colorAssignment.containsKey(related) &&
+                        canShareColor(interferenceGraph, colorAssignment, related, color)) {
+                        colorAssignment.put(related, color);
+                    }
+                }
+            }
+            
+            // Find the highest color used
+            int maxColor = -1;
+            for (Integer color : colorAssignment.values()) {
+                maxColor = Math.max(maxColor, color);
+            }
+            
             return maxColor + 1;
         } catch (Exception e) {
             // If something goes wrong, make a conservative estimate based on graph degree
@@ -405,13 +467,20 @@ public class RegisterAllocator {
                     isCopy = true;
                 }
                 
-                // Variables live out of this instruction interfere with destVar
-                for (String liveVar : liveOut.get(inst)) {
+                // Get variables live after this instruction
+                Set<String> liveVarsOut = new HashSet<>(liveOut.get(inst));
+                
+                // Important: for copy instructions like c = a, 
+                // the source 'a' and destination 'c' shouldn't interfere
+                // since they can share the same register (if 'a' isn't used later)
+                if (isCopy && srcVar != null) {
+                    liveVarsOut.remove(srcVar);
+                }
+                
+                // Create interference edges
+                for (String liveVar : liveVarsOut) {
                     if (!liveVar.equals(destVar) && !liveVar.equals("this")) {
-                        // For copy instructions, the source variable doesn't interfere with the destination
-                        if (!(isCopy && liveVar.equals(srcVar))) {
-                            addInterference(interferenceGraph, destVar, liveVar);
-                        }
+                        addInterference(interferenceGraph, destVar, liveVar);
                     }
                 }
             }
@@ -419,7 +488,7 @@ public class RegisterAllocator {
         
         return interferenceGraph;
     }
-    
+
     /**
      * Helper method to add an interference edge between two variables
      */
@@ -597,9 +666,12 @@ public class RegisterAllocator {
                         continue;
                     }
                     
-                    // Add copy relation
+                    // Add direct copy relation both ways to enable register sharing
                     copyRelations.get(destVar).add(srcVar);
                     copyRelations.get(srcVar).add(destVar);
+                    
+                    // Debug information
+                    System.out.println("Found copy relation: " + destVar + " = " + srcVar);
                 }
             }
         }
@@ -608,20 +680,175 @@ public class RegisterAllocator {
     }
     
     /**
+     * Colors the interference graph to minimize the number of colors used.
+     * Specifically optimized for the case where maxRegisters = 0.
+     */
+    private Map<String, Integer> colorGraphMinimized(Map<String, Set<String>> interferenceGraph, 
+                                                   Map<String, Set<String>> copyChains) {
+        Map<String, Integer> colorAssignment = new HashMap<>();
+        
+        // Group variables that can potentially share the same register
+        // based on copy chains and non-interference
+        List<Set<String>> registerGroups = new ArrayList<>();
+        Set<String> processedVars = new HashSet<>();
+        
+        // Process variables in order of their copy chain size (largest first)
+        // to maximize register sharing
+        List<String> sortedVars = new ArrayList<>(interferenceGraph.keySet());
+        sortedVars.sort((v1, v2) -> {
+            // First sort by copy chain size (larger chains first)
+            int chainSizeDiff = Integer.compare(copyChains.get(v2).size(), copyChains.get(v1).size());
+            if (chainSizeDiff != 0) return chainSizeDiff;
+            
+            // Then sort by interference degree (more interferences first)
+            return Integer.compare(interferenceGraph.get(v2).size(), interferenceGraph.get(v1).size());
+        });
+        
+        // First, try to put each variable into an existing compatible group
+        for (String var : sortedVars) {
+            if (processedVars.contains(var)) continue;
+            
+            // Create a new register group starting with this variable
+            Set<String> group = new HashSet<>();
+            group.add(var);
+            processedVars.add(var);
+            
+            // Add all variables that are related through copy chains and don't interfere
+            // with any variables already in the group
+            for (String related : copyChains.get(var)) {
+                if (!related.equals(var) && !processedVars.contains(related)) {
+                    boolean canAdd = true;
+                    
+                    // Check if this variable interferes with any variable already in the group
+                    for (String groupVar : group) {
+                        if (interferenceGraph.get(groupVar).contains(related)) {
+                            canAdd = false;
+                            break;
+                        }
+                    }
+                    
+                    if (canAdd) {
+                        group.add(related);
+                        processedVars.add(related);
+                    }
+                }
+            }
+            
+            // Try to merge this group with existing groups if possible
+            boolean merged = false;
+            for (int i = 0; i < registerGroups.size(); i++) {
+                Set<String> existingGroup = registerGroups.get(i);
+                boolean canMerge = true;
+                
+                // Check if every variable in this group can be added to the existing group
+                for (String groupVar : group) {
+                    for (String existingVar : existingGroup) {
+                        if (interferenceGraph.get(groupVar).contains(existingVar)) {
+                            canMerge = false;
+                            break;
+                        }
+                    }
+                    if (!canMerge) break;
+                }
+                
+                if (canMerge) {
+                    existingGroup.addAll(group);
+                    merged = true;
+                    break;
+                }
+            }
+            
+            // If couldn't merge, add as a new group
+            if (!merged) {
+                registerGroups.add(group);
+            }
+        }
+        
+        // Now color each group with a unique color
+        for (int i = 0; i < registerGroups.size(); i++) {
+            for (String var : registerGroups.get(i)) {
+                colorAssignment.put(var, i);
+            }
+        }
+        
+        // Debug information
+        for (int i = 0; i < registerGroups.size(); i++) {
+            System.out.println("Register group " + i + ": " + String.join(", ", registerGroups.get(i)));
+        }
+        
+        return colorAssignment;
+    }
+
+    /**
+     * Builds transitive copy chains from direct copy relations.
+     * This helps identify groups of variables that can potentially share registers.
+     */
+    private Map<String, Set<String>> buildTransitiveCopyChains(Map<String, Set<String>> copyRelations) {
+        Map<String, Set<String>> copyChains = new HashMap<>();
+        
+        // Start with direct copy relations
+        for (String var : copyRelations.keySet()) {
+            copyChains.put(var, new HashSet<>());
+            copyChains.get(var).add(var);  // Include self in the chain
+            copyChains.get(var).addAll(copyRelations.get(var));
+        }
+        
+        // Repeatedly extend chains until no more changes
+        boolean changed;
+        do {
+            changed = false;
+            
+            // For each variable's chain
+            for (String var : copyChains.keySet()) {
+                Set<String> originalChain = new HashSet<>(copyChains.get(var));
+                Set<String> newMembers = new HashSet<>();
+                
+                // For each variable in the current chain
+                for (String member : originalChain) {
+                    // Add all of this member's relations to the chain
+                    if (copyChains.containsKey(member)) {
+                        newMembers.addAll(copyChains.get(member));
+                    }
+                }
+                
+                // Add all new members to the chain
+                if (copyChains.get(var).addAll(newMembers)) {
+                    changed = true;
+                }
+            }
+        } while (changed);
+        
+        // Debug information
+        for (String var : copyChains.keySet()) {
+            if (copyChains.get(var).size() > 1) {
+                System.out.println("Copy chain for " + var + ": " + String.join(", ", copyChains.get(var)));
+            }
+        }
+        
+        return copyChains;
+    }
+
+    /**
      * Optimizes the interference graph based on copy relations.
      * Variables in copy relations that don't interfere can potentially share registers.
      */
     private void optimizeForCopyChains(Map<String, Set<String>> interferenceGraph, Map<String, Set<String>> copyRelations) {
-        // For each pair of variables in a copy relation
-        for (String var : copyRelations.keySet()) {
-            for (String copyVar : copyRelations.get(var)) {
-                // If they don't interfere, we prefer them to be allocated to the same register
-                // No need to modify the interference graph, as the graph coloring algorithm
-                // will handle this preference during coloring
-                
-                // We could potentially add a "preference" edge in a separate graph or adjust
-                // the coloring heuristics, but for this implementation we'll rely on the 
-                // ordering of variables in the coloring algorithm
+        // Build transitive copy chains
+        Map<String, Set<String>> copyChains = buildTransitiveCopyChains(copyRelations);
+        
+        // Try to eliminate interference edges between copy-related variables when possible
+        for (String var : interferenceGraph.keySet()) {
+            // For each copy relation
+            for (String related : copyChains.get(var)) {
+                if (!related.equals(var)) {
+                    // Remove interference edges between copy-related variables if they don't actually interfere
+                    // based on liveness analysis (this enables register sharing)
+                    if (interferenceGraph.containsKey(related) && !interferenceGraph.get(var).contains(related)) {
+                        // Ensure the non-interference is maintained in both directions
+                        interferenceGraph.get(var).remove(related);
+                        interferenceGraph.get(related).remove(var);
+                    }
+                }
             }
         }
     }
@@ -693,44 +920,50 @@ public class RegisterAllocator {
         // Initialize result map and removal stack
         Map<String, Integer> colorAssignment = new HashMap<>();
         Stack<String> removalStack = new Stack<>();
-        List<String> nodes = new ArrayList<>(workGraph.keySet());
+        Set<String> removedNodes = new HashSet<>();
         
-        // Group variables by copy chains to try to remove them together
-        Map<String, Set<String>> simplificationGroups = new HashMap<>();
-        for (String var : nodes) {
-            simplificationGroups.put(var, new HashSet<>());
-            simplificationGroups.get(var).add(var);
+        // Group variables into copy chains for simultaneous processing
+        Map<String, Set<String>> copyGroups = new HashMap<>();
+        Map<String, String> nodeToGroup = new HashMap<>();
+        
+        // Create initial copy groups for each node
+        for (String node : workGraph.keySet()) {
+            copyGroups.put(node, new HashSet<>());
+            copyGroups.get(node).add(node);
+            nodeToGroup.put(node, node);
             
-            // Find other variables that can potentially share the same register
-            for (String other : copyChains.get(var)) {
-                if (!other.equals(var) && canShareColor(interferenceGraph, colorAssignment, other, 0)) {
-                    simplificationGroups.get(var).add(other);
+            // Add all nodes that are in the same copy chain and don't interfere
+            for (String copyRelatedNode : copyChains.get(node)) {
+                if (!copyRelatedNode.equals(node) && 
+                    !interferenceGraph.get(node).contains(copyRelatedNode)) {
+                    copyGroups.get(node).add(copyRelatedNode);
+                    nodeToGroup.put(copyRelatedNode, node);
                 }
             }
         }
         
-        // Simplification phase: try to remove variables that can share registers as groups first
-        while (!nodes.isEmpty()) {
-            // Find a node or group with combined degree < maxColors
+        // Sort nodes by priority (copy chain size, then degree)
+        List<String> sortedNodes = new ArrayList<>(workGraph.keySet());
+        sortedNodes.sort((n1, n2) -> {
+            String group1 = nodeToGroup.getOrDefault(n1, n1);
+            String group2 = nodeToGroup.getOrDefault(n2, n2);
+            
+            // First prioritize by copy group size
+            int group1Size = copyGroups.get(group1).size();
+            int group2Size = copyGroups.get(group2).size();
+            if (group1Size != group2Size) {
+                return Integer.compare(group2Size, group1Size); // Larger groups first
+            }
+            
+            // Then by degree (smaller degrees first, easier to color)
+            return Integer.compare(workGraph.get(n1).size(), workGraph.get(n2).size());
+        });
+        
+        // Simplification phase: remove nodes in priority order
+        while (!sortedNodes.isEmpty()) {
+            // Find a node with degree < maxColors
             String nodeToRemove = null;
-            for (String node : nodes) {
-                if (simplificationGroups.get(node).size() > 1) {
-                    // This node is part of a potential register sharing group
-                    // Check if the combined neighborhood size is small enough
-                    Set<String> combinedNeighbors = new HashSet<>();
-                    for (String groupMember : simplificationGroups.get(node)) {
-                        if (nodes.contains(groupMember)) {
-                            combinedNeighbors.addAll(workGraph.get(groupMember));
-                        }
-                    }
-                    
-                    if (combinedNeighbors.size() < maxColors) {
-                        nodeToRemove = node;
-                        break;
-                    }
-                }
-                
-                // Otherwise, fall back to checking individual nodes
+            for (String node : sortedNodes) {
                 if (workGraph.get(node).size() < maxColors) {
                     nodeToRemove = node;
                     break;
@@ -742,32 +975,59 @@ public class RegisterAllocator {
                 throw new RegisterAllocationException(findMinimumRequiredRegisters(interferenceGraph, copyRelations));
             }
             
-            // Remove the node and update the graph
-            removalStack.push(nodeToRemove);
-            nodes.remove(nodeToRemove);
+            // Remove the node and its copy group from consideration
+            String groupLeader = nodeToGroup.get(nodeToRemove);
+            Set<String> group = copyGroups.get(groupLeader);
             
-            // Also remove any other nodes that can share a register with this one
-            for (String shareNode : new ArrayList<>(simplificationGroups.get(nodeToRemove))) {
-                if (nodes.contains(shareNode)) {
-                    removalStack.push(shareNode);
-                    nodes.remove(shareNode);
+            for (String groupNode : group) {
+                if (sortedNodes.contains(groupNode)) {
+                    removalStack.push(groupNode);
+                    sortedNodes.remove(groupNode);
+                    removedNodes.add(groupNode);
+                    
+                    // Remove this node from neighbors' adjacency lists
+                    for (String neighbor : interferenceGraph.get(groupNode)) {
+                        if (workGraph.containsKey(neighbor)) {
+                            workGraph.get(neighbor).remove(groupNode);
+                        }
+                    }
                 }
             }
             
-            // Update the working graph
-            for (String neighbor : interferenceGraph.get(nodeToRemove)) {
-                if (workGraph.containsKey(neighbor)) {
-                    workGraph.get(neighbor).remove(nodeToRemove);
+            // Re-sort the remaining nodes based on new degrees
+            sortedNodes.sort((n1, n2) -> {
+                String group1 = nodeToGroup.getOrDefault(n1, n1);
+                String group2 = nodeToGroup.getOrDefault(n2, n2);
+                
+                // First prioritize by copy group size
+                int group1Size = copyGroups.get(group1).size();
+                int group2Size = copyGroups.get(group2).size();
+                if (group1Size != group2Size) {
+                    return Integer.compare(group2Size, group1Size); // Larger groups first
                 }
-            }
+                
+                // Then by degree (smaller degrees first, easier to color)
+                return Integer.compare(workGraph.get(n1).size(), workGraph.get(n2).size());
+            });
         }
         
         // Coloring phase: assign colors in reverse removal order
         Set<String> processed = new HashSet<>();
+        Map<String, Integer> copyGroupColors = new HashMap<>();
+        
         while (!removalStack.isEmpty()) {
             String node = removalStack.pop();
             if (processed.contains(node)) continue;
-            processed.add(node);
+            
+            String groupLeader = nodeToGroup.get(node);
+            
+            // If this group has already been assigned a color, use it
+            if (copyGroupColors.containsKey(groupLeader)) {
+                int groupColor = copyGroupColors.get(groupLeader);
+                colorAssignment.put(node, groupColor);
+                processed.add(node);
+                continue;
+            }
             
             // Find available color (lowest not used by neighbors)
             Set<Integer> usedColors = new HashSet<>();
@@ -789,21 +1049,38 @@ public class RegisterAllocator {
                 throw new RegisterAllocationException(maxColors + 1);
             }
             
+            // Assign the color to this node
             colorAssignment.put(node, color);
+            processed.add(node);
             
-            // Assign the same color to all variables in the copy chain if possible
-            for (String related : copyChains.get(node)) {
-                if (!related.equals(node) && !colorAssignment.containsKey(related) && 
-                    canShareColor(interferenceGraph, colorAssignment, related, color)) {
-                    colorAssignment.put(related, color);
-                    processed.add(related);
+            // Remember this color for the entire copy group
+            copyGroupColors.put(groupLeader, color);
+            
+            // Assign the same color to all other nodes in this copy group
+            // (but only if it's safe to do so, i.e., doesn't conflict with neighbors)
+            for (String groupNode : copyGroups.get(groupLeader)) {
+                if (!groupNode.equals(node) && !processed.contains(groupNode)) {
+                    // Check if this color conflicts with any neighbors
+                    boolean canUseColor = true;
+                    for (String neighbor : interferenceGraph.get(groupNode)) {
+                        Integer neighborColor = colorAssignment.get(neighbor);
+                        if (neighborColor != null && neighborColor == color) {
+                            canUseColor = false;
+                            break;
+                        }
+                    }
+                    
+                    if (canUseColor) {
+                        colorAssignment.put(groupNode, color);
+                        processed.add(groupNode);
+                    }
                 }
             }
         }
         
         return colorAssignment;
     }
-
+    
     /**
      * Check if a variable can use a specific color without creating conflicts.
      */
@@ -909,45 +1186,5 @@ public class RegisterAllocator {
         }
         
         return report.toString();
-    }
-
-    /**
-     * Builds transitive copy chains from direct copy relations.
-     * This helps identify groups of variables that can potentially share registers.
-     */
-    private Map<String, Set<String>> buildTransitiveCopyChains(Map<String, Set<String>> copyRelations) {
-        Map<String, Set<String>> copyChains = new HashMap<>();
-        
-        // Start with direct copy relations
-        for (String var : copyRelations.keySet()) {
-            copyChains.put(var, new HashSet<>());
-            copyChains.get(var).add(var);  // Include self in the chain
-            copyChains.get(var).addAll(copyRelations.get(var));
-        }
-        
-        // Repeatedly extend chains until no more changes
-        boolean changed;
-        do {
-            changed = false;
-            
-            // For each variable's chain
-            for (String var : copyChains.keySet()) {
-                int sizeBefore = copyChains.get(var).size();
-                
-                // For each direct copy relation
-                for (String related : new HashSet<>(copyChains.get(var))) {
-                    // Add all of related's copy chain to var's chain
-                    if (copyChains.containsKey(related)) {
-                        copyChains.get(var).addAll(copyChains.get(related));
-                    }
-                }
-                
-                if (copyChains.get(var).size() > sizeBefore) {
-                    changed = true;
-                }
-            }
-        } while (changed);
-        
-        return copyChains;
     }
 }

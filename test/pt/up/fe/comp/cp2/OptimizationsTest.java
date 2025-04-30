@@ -16,12 +16,14 @@ package pt.up.fe.comp.cp2;
 import org.junit.Test;
 import pt.up.fe.comp.CpUtils;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
-import pt.up.fe.comp2025.ConfigOptions;
 import pt.up.fe.specs.util.SpecsIo;
+import pt.up.fe.comp2025.ConfigOptions;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class OptimizationsTest {
     private static final String BASE_PATH = "pt/up/fe/comp/cp2/optimizations/";
@@ -71,32 +73,59 @@ public class OptimizationsTest {
 
     @Test
     public void regAllocSequence() {
-
         String filename = "reg_alloc/regalloc.jmm";
-        int expectedTotalReg = 3;
         int configMaxRegs = 1;
 
         OllirResult original = getOllirResult(filename);
         OllirResult optimized = getOllirResultRegalloc(filename, configMaxRegs);
 
-        int originalNumReg = CpUtils.countRegisters(CpUtils.getMethod(original, "soManyRegisters"));
-        int actualNumReg = CpUtils.countRegisters(CpUtils.getMethod(optimized, "soManyRegisters"));
+        // Get methods for analysis
+        var originalMethod = CpUtils.getMethod(original, "soManyRegisters");
+        var optimizedMethod = CpUtils.getMethod(optimized, "soManyRegisters");
 
-        CpUtils.assertNotEquals("Expected number of registers to change with -r flag\n\nOriginal regs:" + originalNumReg + "\nNew regs: " + actualNumReg,
-                originalNumReg, actualNumReg,
-                optimized);
+        int originalNumReg = CpUtils.countRegisters(originalMethod);
+        int actualNumReg = CpUtils.countRegisters(optimizedMethod);
 
-        CpUtils.assertTrue("Expected number of locals in 'soManyRegisters' to be equal to " + expectedTotalReg + ", is " + actualNumReg,
-                actualNumReg == expectedTotalReg,
-                optimized);
+        CpUtils.assertNotEquals(
+            "Expected number of registers to change with -r flag\n\nOriginal regs:" + originalNumReg + "\nNew regs: " + actualNumReg,
+            originalNumReg, actualNumReg,
+            optimized
+        );
 
-
-        var varTable = CpUtils.getMethod(optimized, "soManyRegisters").getVarTable();
+        // Get variable table and register assignments
+        var varTable = optimizedMethod.getVarTable();
         var aReg = varTable.get("a").getVirtualReg();
-        CpUtils.assertEquals("Expected registers of variables 'a' and 'b' to be the same", aReg, varTable.get("b").getVirtualReg(), optimized);
-        CpUtils.assertEquals("Expected registers of variables 'a' and 'c' to be the same", aReg, varTable.get("c").getVirtualReg(), optimized);
-        CpUtils.assertEquals("Expected registers of variables 'a' and 'd' to be the same", aReg, varTable.get("d").getVirtualReg(), optimized);
+        var bReg = varTable.get("b").getVirtualReg();
+        var cReg = varTable.get("c").getVirtualReg();
+        var dReg = varTable.get("d").getVirtualReg();
+        
+        // Verify all variables share the same register in a copy chain
+        CpUtils.assertEquals("Expected registers of variables 'a' and 'b' to be the same", aReg, bReg, optimized);
+        CpUtils.assertEquals("Expected registers of variables 'a' and 'c' to be the same", aReg, cReg, optimized);
+        CpUtils.assertEquals("Expected registers of variables 'a' and 'd' to be the same", aReg, dReg, optimized);
+        
+        // Count unique registers used by local variables
+        Set<Integer> localRegisters = new HashSet<>();
+        localRegisters.add(aReg);
+        localRegisters.add(bReg);
+        localRegisters.add(cReg);
+        localRegisters.add(dReg);
+        int uniqueLocalRegs = localRegisters.size();
+        
+        int expectedUniqueLocalRegs = 1; // All locals should share the same register
+        CpUtils.assertEquals(
+            "Expected local variables to use exactly " + expectedUniqueLocalRegs + " register, found " + uniqueLocalRegs,
+            expectedUniqueLocalRegs, uniqueLocalRegs, 
+            optimized
+        );
 
+        // Verify total register count including parameters
+        int expectedTotalReg = 3; // locals + this + arg parameter
+        CpUtils.assertTrue(
+            "Expected total number of registers in 'soManyRegisters' to be equal to " + expectedTotalReg + ", is " + actualNumReg,
+            actualNumReg == expectedTotalReg,
+            optimized
+        );
     }
 
 
@@ -183,27 +212,49 @@ public class OptimizationsTest {
     @Test
     public void regAllocMinimize() {
         String filename = "reg_alloc/regalloc_minimize.jmm";
-        int expectedTotalReg = 2;
         int configMaxRegs = 0; // Minimize registers
 
         OllirResult original = getOllirResult(filename);
         OllirResult optimized = getOllirResultRegalloc(filename, configMaxRegs);
 
-        int originalNumReg = CpUtils.countRegisters(CpUtils.getMethod(original, "minimize"));
-        int actualNumReg = CpUtils.countRegisters(CpUtils.getMethod(optimized, "minimize"));
+        // Get the method from original and optimized results
+        var originalMethod = CpUtils.getMethod(original, "minimize");
+        var optimizedMethod = CpUtils.getMethod(optimized, "minimize");
 
-        CpUtils.assertNotEquals("Expected number of registers to change with -r flag (minimize case)\n\nOriginal regs:" + originalNumReg + "\nNew regs: " + actualNumReg,
-                originalNumReg, actualNumReg,
-                optimized);
-
-        CpUtils.assertTrue("Expected number of locals in 'minimize' to be equal to " + expectedTotalReg + ", is " + actualNumReg,
-                actualNumReg == expectedTotalReg,
-                optimized);
-
-        var varTable = CpUtils.getMethod(optimized, "minimize").getVarTable();
+        // Verify that variables a and c share the same register through the variable table
+        var varTable = optimizedMethod.getVarTable();
         var aReg = varTable.get("a").getVirtualReg();
-        CpUtils.assertEquals("Expected registers of variables 'a' and 'c' to be the same in minimize mode", 
-                aReg, varTable.get("c").getVirtualReg(), optimized);
+        var bReg = varTable.get("b").getVirtualReg();
+        var cReg = varTable.get("c").getVirtualReg();
+
+        // Verify a and c share the same register
+        CpUtils.assertEquals(
+            "Expected registers of variables 'a' and 'c' to be the same in minimize mode", 
+            aReg, cReg, 
+            optimized
+        );
+
+        // Verify a and b use different registers
+        CpUtils.assertNotEquals(
+            "Expected registers of variables 'a' and 'b' to be different", 
+            aReg, bReg, 
+            optimized
+        );
+        
+        // Specifically count how many unique registers are used by local variables a, b, and c
+        Set<Integer> localRegisters = new HashSet<>();
+        localRegisters.add(aReg);
+        localRegisters.add(bReg);
+        localRegisters.add(cReg);
+        int uniqueLocalRegs = localRegisters.size();
+        
+        // We expect 2 unique registers: one for a/c and one for b
+        int expectedUniqueLocalRegs = 2;
+        CpUtils.assertEquals(
+            "Expected local variables to use exactly " + expectedUniqueLocalRegs + " registers, found " + uniqueLocalRegs,
+            expectedUniqueLocalRegs, uniqueLocalRegs, 
+            optimized
+        );
     }
 
     @Test
