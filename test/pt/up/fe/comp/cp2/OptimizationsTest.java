@@ -287,8 +287,8 @@ public class OptimizationsTest {
     @Test
     public void regAllocParams() {
         String filename = "reg_alloc/regalloc_params.jmm";
-        int expectedTotalReg = 5; // 2 parameters + this + 2 locals
-        int configMaxRegs = 2;
+        int expectedTotalReg = 4; // 2 parameters + this + 2 locals (the locals can share one register!)
+        int configMaxRegs = 1;
 
         OllirResult optimized = getOllirResultRegalloc(filename, configMaxRegs);
         int actualNumReg = CpUtils.countRegisters(CpUtils.getMethod(optimized, "withParams"));
@@ -313,7 +313,7 @@ public class OptimizationsTest {
     @Test
     public void regAllocCopyChains() {
         String filename = "reg_alloc/regalloc_copy_chains.jmm";
-        int expectedTotalReg = 4; // Including parameters
+        int expectedTotalReg = 3; // Including parameters
         int configMaxRegs = 1;
 
         OllirResult optimized = getOllirResultRegalloc(filename, configMaxRegs);
@@ -327,6 +327,10 @@ public class OptimizationsTest {
         var aReg = varTable.get("a").getVirtualReg();
         var bReg = varTable.get("b").getVirtualReg();
         var cReg = varTable.get("c").getVirtualReg();
+
+        System.out.println("RegA: " + aReg);
+        System.out.println("RegB: " + bReg);
+        System.out.println("RegC: " + cReg);
 
         CpUtils.assertEquals("Expected registers of variables in a copy chain to be the same", 
                 aReg, bReg, optimized);

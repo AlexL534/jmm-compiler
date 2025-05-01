@@ -6,8 +6,8 @@ class RegAlloc {
         int result;
         
         a = 10;
-        b = helper(a);     // Value of a is live across the call
-        c = helper(b);     // Value of b is live across the call
+        b = this.helper(a);     // Value of a is live across the call
+        c = this.helper(b);     // Value of b is live across the call
         result = a + b + c; // All values used after their computations
         
         return result;

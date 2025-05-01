@@ -134,6 +134,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
     private String visitAssignStmt(JmmNode node, Void unused) {
         // Set the current method in the expression visitor
         exprVisitor.currentMethod = this.currentMethod;
+        types.setCurrentMethod(currentMethod);
         
         var rhs = exprVisitor.visit(node.getChild(0));
 

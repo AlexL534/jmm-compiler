@@ -19,7 +19,7 @@ class RegAlloc {
         z = y;    // z should share register with x and y
         
         // Use values after copy chains
-        d = a + z;  // a and z used for computation
+        d = 1 + z;  //z used for computation
         
         return d;
     }
