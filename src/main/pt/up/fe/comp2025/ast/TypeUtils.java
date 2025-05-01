@@ -85,7 +85,8 @@ public class TypeUtils {
         }
         else if(Kind.VAR_REF_EXPR.check(expr) || Kind.VAR_DECL.check(expr)) {
             for (Symbol field : table.getFields()) {
-                if (field.getName().equals(expr.get("name"))) {
+                //The main method is static so it cannot access class fields
+                if (field.getName().equals(expr.get("name")) && !currentMethod.equals("main")) {
                     type = field.getType().getName();
                     isArray = field.getType().isArray();
                 }

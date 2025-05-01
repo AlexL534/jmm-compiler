@@ -31,11 +31,12 @@ public class AssignmentCheck extends AnalysisVisitor {
 
         //First get the Type of the variable that is being assigned
         var varName = node.get("varName");
-        String typeVar = "int";
+        String typeVar = "unknown";
         boolean isArrayVar = false;
 
         for (Symbol field : table.getFields()) {
-            if (field.getName().equals(varName)) {
+            //the main method is static so it cannot use class fields
+            if (field.getName().equals(varName) && !currentMethod.equals("main")) {
                 typeVar = field.getType().getName();
                 isArrayVar = field.getType().isArray();
             }
