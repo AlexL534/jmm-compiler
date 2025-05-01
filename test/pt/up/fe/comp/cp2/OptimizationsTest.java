@@ -410,7 +410,7 @@ public class OptimizationsTest {
     @Test
     public void regAllocMethodCalls() {
         String filename = "reg_alloc/regalloc_method_calls.jmm";
-        int expectedTotalReg = 6; // a, b, c, result, arg parameter, this parameter
+        int expectedTotalReg = 5; // a, b, c, result (the result can share a register with one of the other local variables), arg parameter, this parameter
         int configMaxRegs = 3;
 
         OllirResult original = getOllirResult(filename);
@@ -431,10 +431,15 @@ public class OptimizationsTest {
         var varTable = CpUtils.getMethod(optimized, "methodWithCalls").getVarTable();
         var aReg = varTable.get("a").getVirtualReg();
         var bReg = varTable.get("b").getVirtualReg();
+        var cReg = varTable.get("c").getVirtualReg();
         
         // 'a' and 'b' values are both needed after method calls, they should have different registers
         CpUtils.assertNotEquals("Expected variables 'a' and 'b' to have different registers as both are needed after method calls",
                 aReg, bReg, optimized);
+
+        // 'a' and 'c' values are both needed after method calls, they should have different registers
+        CpUtils.assertNotEquals("Expected variables 'a' and 'b' to have different registers as both are needed after method calls",
+                bReg, cReg, optimized);
     }
 
     @Test
