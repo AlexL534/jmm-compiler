@@ -1,0 +1,5 @@
+  class length {
+    length f(length length) {
+        return length;
+    }
+}

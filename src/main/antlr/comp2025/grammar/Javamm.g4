@@ -93,7 +93,6 @@ stmt
 
 expr
     : '(' expr ')' #Parentheses
-    | expr '.' 'length' #ArrayLength
     | 'new' INT '[' expr ']' #ArrayCreation
     | 'new' name=ID '(' ')' #ObjectCreation
     | expr '[' expr ']' #ArraySubscript

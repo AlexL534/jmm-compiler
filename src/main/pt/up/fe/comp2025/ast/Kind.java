@@ -35,7 +35,6 @@ public enum Kind {
     ARRAY_CREATION,
     ARRAY_TYPE,
     VAR_ARG_TYPE,
-    ARRAY_LENGTH,
     BOOLEAN_LITERAL,
     STRING_LITERAL,
     IF_STMT,
@@ -48,7 +47,8 @@ public enum Kind {
     OBJECT_CREATION,
     ID_TYPE,
     BLOCK_STMT,
-    EXPR_STMT;
+    EXPR_STMT,
+    FIELD_ACCESS;
 
 
     private final String name;

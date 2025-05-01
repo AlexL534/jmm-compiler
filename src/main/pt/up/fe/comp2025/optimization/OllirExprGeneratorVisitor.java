@@ -43,7 +43,7 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         addVisit(INTEGER_LITERAL, this::visitInteger);
         addVisit(BOOLEAN_LITERAL, this::visitBoolean);
         addVisit(ARRAY_CREATION, this::visitArrayCreation);
-        addVisit(ARRAY_LENGTH, this::visitArrayLength);
+        addVisit(FIELD_ACCESS, this::visitFieldAccess);
         addVisit(ARRAY_SUBSCRIPT, this::visitArraySubscript);
         addVisit(METHOD_CALL, this::visitMethodCall);
         addVisit(NEW_OBJECT, this::visitNewObject);
@@ -104,20 +104,30 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         return new OllirExprResult(tempVar, computation);
     }
 
-    private OllirExprResult visitArrayLength(JmmNode node, Void unused) {
-        //get the code of the original type
-        var arrayReference = visit(node.getChild(0));
+    private OllirExprResult visitFieldAccess(JmmNode node, Void unused) {
+        JmmNode exprNode = node.getChild(0); // the object being accessed
+        String fieldName = node.get("name");
 
-        // Create a new temporary variable for the array length
-        String lenType = ".i32";
-        String tempVar = ollirTypes.nextTemp() + lenType;
+        OllirExprResult exprResult = visit(exprNode);
 
         StringBuilder computation = new StringBuilder();
-        computation.append(arrayReference.getComputation());
-        computation.append(tempVar).append(SPACE)
-                .append(ASSIGN).append(lenType).append(SPACE)
-                .append("arraylength( ").append(arrayReference.getCode()).append(")").append(lenType)
-                .append(END_STMT);
+        computation.append(exprResult.getComputation());
+
+        String tempVar = ollirTypes.nextTemp() + ".i32";
+
+        if (fieldName.equals("length")) {
+            computation.append(tempVar).append(SPACE)
+                    .append(ASSIGN).append(".i32").append(SPACE)
+                    .append("arraylength(").append(exprResult.getCode()).append(")")
+                    .append(".i32")
+                    .append(END_STMT);
+        } else {
+            computation.append(tempVar).append(SPACE)
+                    .append(ASSIGN).append(SPACE)
+                    .append("getfield(").append(exprResult.getCode()).append(", ")
+                    .append(fieldName).append(")")
+                    .append(END_STMT);
+        }
 
         return new OllirExprResult(tempVar, computation);
     }

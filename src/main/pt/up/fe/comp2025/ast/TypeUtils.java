@@ -129,7 +129,7 @@ public class TypeUtils {
             type = table.getReturnType(expr.get("name")).getName();
             isArray = table.getReturnType(expr.get("name")).isArray();
         }
-            else if(Kind.ARRAY_LENGTH.check(expr)){
+            else if(Kind.FIELD_ACCESS.check(expr)){
             type = "int";
             isArray = false;
         }
