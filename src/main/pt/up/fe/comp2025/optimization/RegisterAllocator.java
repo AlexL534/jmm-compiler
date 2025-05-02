@@ -746,6 +746,51 @@ public class RegisterAllocator {
                     // Debug information
                     System.out.println("Found copy relation: " + destVar + " = " + srcVar);
                 }
+                // Special handling for expressions with parameters - be more selective
+                else if (assign.getRhs() instanceof BinaryOpInstruction binaryOp) {
+                    // Only handle specific cases like x = arg * 2 where one operand is a constant
+                    // and one is a parameter - typical patterns for copy chains
+                    Element leftOperand = binaryOp.getLeftOperand();
+                    Element rightOperand = binaryOp.getRightOperand();
+                    boolean leftIsParam = false;
+                    boolean rightIsParam = false;
+                    boolean leftIsConstant = (leftOperand instanceof LiteralElement);
+                    boolean rightIsConstant = (rightOperand instanceof LiteralElement);
+                    String paramName = null;
+                    
+                    // Check if left operand is a parameter
+                    if (leftOperand instanceof Operand && !(leftOperand instanceof ArrayOperand)) {
+                        String leftVarName = ((Operand) leftOperand).getName();
+                        if (!leftVarName.equals("this") && method.getParams().stream()
+                                .filter(Operand.class::isInstance)
+                                .map(param -> ((Operand) param).getName())
+                                .anyMatch(name -> name.equals(leftVarName))) {
+                            leftIsParam = true;
+                            paramName = leftVarName;
+                        }
+                    }
+                    
+                    // Check if right operand is a parameter
+                    if (rightOperand instanceof Operand && !(rightOperand instanceof ArrayOperand)) {
+                        String rightVarName = ((Operand) rightOperand).getName();
+                        if (!rightVarName.equals("this") && method.getParams().stream()
+                                .filter(Operand.class::isInstance)
+                                .map(param -> ((Operand) param).getName())
+                                .anyMatch(name -> name.equals(rightVarName))) {
+                            rightIsParam = true;
+                            paramName = rightVarName;
+                        }
+                    }
+                    
+                    // Only create parameter-based copy relation when one side is a parameter
+                    // and the other side is a constant or simple operand
+                    // This is typically the pattern in expressions like x = arg * 2
+                    if ((leftIsParam && rightIsConstant) || (rightIsParam && leftIsConstant)) {
+                        copyRelations.get(destVar).add(paramName);
+                        copyRelations.get(paramName).add(destVar);
+                        System.out.println("Found parameter-based copy relation: " + destVar + " = " + paramName + " (in expression)");
+                    }
+                }
             }
         }
         
