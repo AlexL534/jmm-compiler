@@ -447,6 +447,24 @@ public class RegisterAllocator {
             }
         }
         
+        // First pass: Find all copy relations for variables that are on the left-hand side of assignments
+        Map<String, String> destinationMappings = new HashMap<>();
+        for (Instruction inst : method.getInstructions()) {
+            if (inst instanceof AssignInstruction assign) {
+                if (assign.getDest() instanceof Operand) {
+                    String destVar = ((Operand) assign.getDest()).getName();
+                    if (assign.getRhs() instanceof SingleOpInstruction sop &&
+                        sop.getSingleOperand() instanceof Operand) {
+                        String srcVar = ((Operand) sop.getSingleOperand()).getName();
+                        destinationMappings.put(destVar, srcVar);
+                    } else if (assign.getRhs() instanceof CallInstruction) {
+                        // Store the call result destination
+                        destinationMappings.put(destVar, "@CALL_RESULT@");
+                    }
+                }
+            }
+        }
+        
         // Build interference edges
         for (Instruction inst : method.getInstructions()) {
             if (inst instanceof AssignInstruction assign) {
@@ -470,19 +488,65 @@ public class RegisterAllocator {
                 // Get variables live after this instruction
                 Set<String> liveVarsOut = new HashSet<>(liveOut.get(inst));
                 
-                // Important: for copy instructions like c = a, 
+                // CRITICAL FIX: For method call assignments, force interference between
+                // the destination variable and any variables used in the method call arguments
+                if (assign.getRhs() instanceof CallInstruction call) {
+                    // For method calls like b = this.helper(a), make sure b and a interfere
+                    for (Element arg : call.getArguments()) {
+                        if (arg instanceof Operand && !(arg instanceof ArrayOperand)) {
+                            String argVarName = ((Operand) arg).getName();
+                            if (!argVarName.equals("this") && !argVarName.equals(destVar)) {
+                                // Explicitly add interference between the argument and destination
+                                addInterference(interferenceGraph, destVar, argVarName);
+                                System.out.println("Added method call parameter interference: " + destVar + " <-> " + argVarName);
+                                
+                                // CRITICAL FIX: Also add interference with all other call results
+                                // This ensures that variables receiving method call results don't share registers
+                                // when one call's parameter depends on another call's result
+                                for (Map.Entry<String, String> entry : destinationMappings.entrySet()) {
+                                    if (entry.getValue().equals("@CALL_RESULT@") && 
+                                        !entry.getKey().equals(destVar)) {
+                                        addInterference(interferenceGraph, destVar, entry.getKey());
+                                        System.out.println("Added call result interference: " + destVar + " <-> " + entry.getKey());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // For copy instructions like c = a, 
                 // the source 'a' and destination 'c' shouldn't interfere
                 // since they can share the same register (if 'a' isn't used later)
                 if (isCopy && srcVar != null) {
                     liveVarsOut.remove(srcVar);
                 }
                 
-                // Create interference edges
+                // Create interference edges with variables that are live after
                 for (String liveVar : liveVarsOut) {
                     if (!liveVar.equals(destVar) && !liveVar.equals("this")) {
                         addInterference(interferenceGraph, destVar, liveVar);
                     }
                 }
+            }
+        }
+        
+        // Post-processing: Manually add interference between method call result variables
+        // to ensure they don't share registers
+        List<String> methodCallResults = new ArrayList<>();
+        for (Map.Entry<String, String> entry : destinationMappings.entrySet()) {
+            if (entry.getValue().equals("@CALL_RESULT@")) {
+                methodCallResults.add(entry.getKey());
+            }
+        }
+        
+        // Ensure all method call results interfere with each other
+        for (int i = 0; i < methodCallResults.size(); i++) {
+            for (int j = i + 1; j < methodCallResults.size(); j++) {
+                String var1 = methodCallResults.get(i);
+                String var2 = methodCallResults.get(j);
+                addInterference(interferenceGraph, var1, var2);
+                System.out.println("Added result-result interference: " + var1 + " <-> " + var2);
             }
         }
         
@@ -522,6 +586,15 @@ public class RegisterAllocator {
             
             // Extract variables used in the RHS
             collectUsedVarsFromInstruction(assign.getRhs(), used);
+            
+            // IMPORTANT FIX: If the RHS is a method call, ensure all parameters are marked as used
+            // to prevent incorrect register sharing between parameters and results
+            if (assign.getRhs() instanceof CallInstruction call) {
+                // Make sure all parameters are properly marked as used
+                for (Element arg : call.getArguments()) {
+                    collectUsedVarsFromElement(arg, used);
+                }
+            }
         } else if (inst instanceof CallInstruction call) {
             // Method calls use their arguments
             // If instance method, the caller is used
