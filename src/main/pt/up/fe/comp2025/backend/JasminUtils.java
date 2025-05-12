@@ -24,4 +24,29 @@ public class JasminUtils {
                 accessModifier.name().toLowerCase() + " " :
                 "";
     }
+
+    public String ollirToJasminType(Type type) {
+        var result = "I";
+        switch (type.toString()){
+            case "I32":
+                result = "I";
+                break;
+            case "INT32[]":
+                result = "[I";
+                break;
+            case "BOOL":
+                result = "Z";
+                break;
+            case "VOID":
+                result = "V";
+                break;
+            case "STRING":
+                result = "STRING";
+                break;
+            default:
+                result = "I";
+
+        };
+        return result;
+    }
 }

@@ -4,11 +4,9 @@ import org.specs.comp.ollir.ClassUnit;
 import org.specs.comp.ollir.LiteralElement;
 import org.specs.comp.ollir.Method;
 import org.specs.comp.ollir.Operand;
-import org.specs.comp.ollir.inst.AssignInstruction;
-import org.specs.comp.ollir.inst.BinaryOpInstruction;
-import org.specs.comp.ollir.inst.ReturnInstruction;
-import org.specs.comp.ollir.inst.SingleOpInstruction;
+import org.specs.comp.ollir.inst.*;
 import org.specs.comp.ollir.tree.TreeNode;
+import org.specs.comp.ollir.type.Type;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
 import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.specs.util.classmap.FunctionClassMap;
@@ -59,6 +57,10 @@ public class JasminGenerator {
         generators.put(Operand.class, this::generateOperand);
         generators.put(BinaryOpInstruction.class, this::generateBinaryOp);
         generators.put(ReturnInstruction.class, this::generateReturn);
+        generators.put(NewInstruction.class,this::generateNewInstruction);
+        generators.put(InvokeSpecialInstruction.class, this::generateInvokeSpecialInstruction);
+        generators.put(PutFieldInstruction.class, this::generatePutFieldInstruction);
+        generators.put(GetFieldInstruction.class, this::generateGetFieldInstruction);
     }
 
     private String apply(TreeNode node) {
@@ -97,7 +99,11 @@ public class JasminGenerator {
         code.append(".class ").append(className).append(NL).append(NL);
 
         // TODO: When you support 'extends', this must be updated
-        var fullSuperClass = "java/lang/Object";
+        var superClass = ollirResult.getOllirClass().getSuperClass();
+        var fullSuperClass = superClass;
+        if(fullSuperClass == null) {
+            fullSuperClass = "java/lang/Object";
+        }
 
         code.append(".super ").append(fullSuperClass).append(NL);
 
@@ -142,12 +148,29 @@ public class JasminGenerator {
         var methodName = method.getMethodName();
 
         // TODO: Hardcoded param types and return type, needs to be expanded
-        var params = "I";
-        var returnType = "I";
+        var paramsList = method.getParams();
+        StringBuilder params = new StringBuilder();
+
+        if(!methodName.equals("main")) {
+            for (int i = 0; i < paramsList.size(); i++) {
+                var param = (Operand) paramsList.get(0);
+                if (i == (paramsList.size() - 1)) {
+                    params.append(param.getName());
+                } else {
+                    params.append(param.getName()).append(",");
+                }
+            }
+        }
+        else{
+            params.append("[Ljava/lang/String;");
+        }
+
+        var returnType = types.ollirToJasminType(method.getReturnType());
 
         code.append("\n.method ").append(modifier)
                 .append(methodName)
                 .append("(" + params + ")" + returnType).append(NL);
+
 
         // Add limits
         code.append(TAB).append(".limit stack 99").append(NL);
@@ -237,6 +260,67 @@ public class JasminGenerator {
         // TODO: Hardcoded for int type, needs to be expanded
         code.append("ireturn").append(NL);
 
+        return code.toString();
+    }
+
+    private String generateNewInstruction(NewInstruction newInstruction){
+        var code = new StringBuilder();
+
+        var caller = (Operand) newInstruction.getCaller();
+        var callerType = caller.getType();
+
+        switch(callerType.toString()){
+            case "INT32[]":
+                code.append("newarray int").append(NL);
+                break;
+            default:
+                code.append("new ").append(caller.getName()).append(NL);
+        }
+
+        return code.toString();
+    }
+
+    private String generateInvokeSpecialInstruction(InvokeSpecialInstruction invokeSpecialInstruction) {
+        var code = new StringBuilder();
+        code.append("invokenonvirtual ");
+
+        var caller = (Operand) invokeSpecialInstruction.getCaller();
+        var callerName = caller.getName();
+
+        code.append(callerName).append("/<init>()V").append(NL);
+
+        return code.toString();
+    }
+
+    private String generatePutFieldInstruction(PutFieldInstruction putFieldInstruction) {
+        var code = new StringBuilder();
+
+        var operands = putFieldInstruction.getOperands();
+
+        var className = ollirResult.getOllirClass().getClassName();
+        var fieldOperand =(Operand) operands.get(1);
+        var field = fieldOperand.getName();
+        var literalElement = operands.get(2);
+        var literalType = types.ollirToJasminType(literalElement.getType());
+        var pushCode = apply(literalElement);
+
+        code.append("aload 0").append(NL); //load the "this" value
+        code.append(pushCode).
+                append("putfield ").append(className).append("/").append(field).append(" ").append(literalType).append(NL);
+
+        return code.toString();
+    }
+
+    private String generateGetFieldInstruction(GetFieldInstruction getFieldInstruction) {
+        var code = new StringBuilder();
+
+        var operands = getFieldInstruction.getOperands();
+        var className = ollirResult.getOllirClass().getClassName();
+        var fieldOperand = (Operand) operands.get(1);
+        var type = types.ollirToJasminType(getFieldInstruction.getFieldType());
+
+        code.append("aload 0").append(NL); //load the "this" value
+        code.append("getfield ").append(className).append("/").append(fieldOperand.getName()).append(" ").append(type).append(NL);
         return code.toString();
     }
 }
