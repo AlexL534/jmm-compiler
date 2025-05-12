@@ -1,9 +1,6 @@
 package pt.up.fe.comp2025.backend;
 
-import org.specs.comp.ollir.ClassUnit;
-import org.specs.comp.ollir.LiteralElement;
-import org.specs.comp.ollir.Method;
-import org.specs.comp.ollir.Operand;
+import org.specs.comp.ollir.*;
 import org.specs.comp.ollir.inst.*;
 import org.specs.comp.ollir.tree.TreeNode;
 import org.specs.comp.ollir.type.Type;
@@ -61,6 +58,10 @@ public class JasminGenerator {
         generators.put(InvokeSpecialInstruction.class, this::generateInvokeSpecialInstruction);
         generators.put(PutFieldInstruction.class, this::generatePutFieldInstruction);
         generators.put(GetFieldInstruction.class, this::generateGetFieldInstruction);
+        generators.put(CondBranchInstruction.class, this::generateCondBranchInstruction);
+        generators.put(InvokeStaticInstruction.class, this::generateInvokeStaticInstruction);
+        generators.put(GotoInstruction.class, this::generateGotoInstruction);
+
     }
 
     private String apply(TreeNode node) {
@@ -231,12 +232,34 @@ public class JasminGenerator {
         return "iload " + reg.getVirtualReg() + NL;
     }
 
+    private String lessThanOp(Element left, Element right){
+        var code = new StringBuilder();
+
+        var leftLiteral = (LiteralElement) left;
+        var leftValue = leftLiteral.getLiteral();
+        var rightLiteral = (LiteralElement) right;
+        var rightValue = rightLiteral.getLiteral();
+
+
+        if(Integer.parseInt(leftValue) < Integer.parseInt(rightValue)){
+            code.append("ldc 1").append(NL);
+        }
+        else{
+            code.append("ldc 0").append(NL);
+        }
+
+
+        return code.toString();
+    }
+
     private String generateBinaryOp(BinaryOpInstruction binaryOp) {
         var code = new StringBuilder();
 
         // load values on the left and on the right
         code.append(apply(binaryOp.getLeftOperand()));
         code.append(apply(binaryOp.getRightOperand()));
+
+
 
         // TODO: Hardcoded for int type, needs to be expanded
         var typePrefix = "i";
@@ -245,10 +268,16 @@ public class JasminGenerator {
         var op = switch (binaryOp.getOperation().getOpType()) {
             case ADD -> "add";
             case MUL -> "mul";
+            case LTH -> lessThanOp(binaryOp.getLeftOperand(), binaryOp.getRightOperand());
             default -> throw new NotImplementedException(binaryOp.getOperation().getOpType());
         };
 
-        code.append(typePrefix + op).append(NL);
+        if(binaryOp.getOperation().getOpType().equals(OperationType.LTH)){
+            code.append(op);
+        }
+        else {
+            code.append(typePrefix + op).append(NL);
+        }
 
         return code.toString();
     }
@@ -291,6 +320,30 @@ public class JasminGenerator {
         return code.toString();
     }
 
+    private String generateInvokeStaticInstruction(InvokeStaticInstruction invokeStaticInstruction) {
+        var code = new StringBuilder();
+
+
+
+        var caller = (Operand) invokeStaticInstruction.getCaller();
+        var callerName = caller.getName();
+        var methodName = ((LiteralElement) invokeStaticInstruction.getMethodName()).getLiteral();
+        var args = invokeStaticInstruction.getArguments();
+        var argTypes = new StringBuilder();
+
+        for(var arg : args){
+            argTypes.append(types.ollirToJasminType(arg.getType()));
+            code.append(apply(arg));
+        }
+
+        code.append("invokestatic ");
+        code.append(callerName)
+                .append("/").append(methodName).append("(").append(argTypes).append(")")
+                .append(types.ollirToJasminType(invokeStaticInstruction.getReturnType())).append(NL);
+
+        return code.toString();
+    }
+
     private String generatePutFieldInstruction(PutFieldInstruction putFieldInstruction) {
         var code = new StringBuilder();
 
@@ -322,4 +375,26 @@ public class JasminGenerator {
         code.append("getfield ").append(className).append("/").append(fieldOperand.getName()).append(" ").append(type).append(NL);
         return code.toString();
     }
+
+    private String generateCondBranchInstruction(CondBranchInstruction condBranchInstruction){
+        var code = new StringBuilder();
+        var condition = condBranchInstruction.getCondition();
+        var conditionCode = apply(condition);
+        var label = condBranchInstruction.getLabel();
+
+        code.append(conditionCode);
+        code.append("ifne ").append(label).append(NL);
+
+        return code.toString();
+    }
+
+    private String generateGotoInstruction(GotoInstruction gotoInstruction) {
+        var code = new StringBuilder();
+
+
+        code.append("goto ").append(gotoInstruction.getLabel()).append(NL);
+        return code.toString();
+    }
+
+
 }

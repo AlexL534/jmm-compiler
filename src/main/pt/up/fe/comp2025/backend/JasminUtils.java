@@ -13,6 +13,8 @@ public class JasminUtils {
 
     private final OllirResult ollirResult;
 
+    private int currentTempLabels = 0;
+
     public JasminUtils(OllirResult ollirResult) {
         // Can be useful to have if you expand this class with more methods
         this.ollirResult = ollirResult;
@@ -23,6 +25,11 @@ public class JasminUtils {
         return accessModifier != AccessModifier.DEFAULT ?
                 accessModifier.name().toLowerCase() + " " :
                 "";
+    }
+
+    public int getCurrentTempLabel() {
+        currentTempLabels++;
+        return currentTempLabels;
     }
 
     public String ollirToJasminType(Type type) {
