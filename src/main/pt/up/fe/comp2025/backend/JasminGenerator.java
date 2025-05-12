@@ -153,12 +153,8 @@ public class JasminGenerator {
 
         if(!methodName.equals("main")) {
             for (int i = 0; i < paramsList.size(); i++) {
-                var param = (Operand) paramsList.get(0);
-                if (i == (paramsList.size() - 1)) {
-                    params.append(param.getName());
-                } else {
-                    params.append(param.getName()).append(",");
-                }
+                var param = (Operand) paramsList.get(i);
+                params.append(types.ollirToJasminType(param.getType()));
             }
         }
         else{
@@ -167,8 +163,11 @@ public class JasminGenerator {
 
         var returnType = types.ollirToJasminType(method.getReturnType());
 
-        code.append("\n.method ").append(modifier)
-                .append(methodName)
+        code.append("\n.method ").append(modifier);
+        if(methodName.equals("main")) {
+            code.append("static ");
+        }
+        code.append(methodName)
                 .append("(" + params + ")" + returnType).append(NL);
 
 

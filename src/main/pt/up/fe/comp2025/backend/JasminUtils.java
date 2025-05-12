@@ -34,7 +34,7 @@ public class JasminUtils {
             case "INT32[]":
                 result = "[I";
                 break;
-            case "BOOL":
+            case "BOOLEAN":
                 result = "Z";
                 break;
             case "VOID":
