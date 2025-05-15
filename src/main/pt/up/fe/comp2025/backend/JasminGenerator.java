@@ -408,48 +408,65 @@ public class JasminGenerator {
                 code.append(typePrefix + "div").append(NL);
                 break;
             case LTH:
-                // For less than comparison
-                if (rightOperand instanceof LiteralElement && ((LiteralElement) rightOperand).getLiteral().equals("0")) {
-                    // if leftOp < 0, result is iflt
-                    code.append("iflt").append(NL);
-                } else {
-                    code.append("if_icmplt").append(NL);
-                }
+                // Compare and push 1 or 0 to the stack
+                String ifLessLabel = "if_less_" + types.getCurrentTempLabel();
+                String endLabel = "end_comparison_" + types.getCurrentTempLabel();
+                code.append("if_icmplt ").append(ifLessLabel).append(NL);
+                code.append("iconst_0").append(NL); // False case
+                code.append("goto ").append(endLabel).append(NL);
+                code.append(ifLessLabel).append(":").append(NL);
+                code.append("iconst_1").append(NL); // True case
+                code.append(endLabel).append(":").append(NL);
                 break;
             case GTH:
-                if (rightOperand instanceof LiteralElement && ((LiteralElement) rightOperand).getLiteral().equals("0")) {
-                    code.append("ifgt").append(NL);
-                } else {
-                    code.append("if_icmpgt").append(NL);
-                }
+                String ifGreaterLabel = "if_greater_" + types.getCurrentTempLabel();
+                String endGreaterLabel = "end_comparison_" + types.getCurrentTempLabel();
+                code.append("if_icmpgt ").append(ifGreaterLabel).append(NL);
+                code.append("iconst_0").append(NL);
+                code.append("goto ").append(endGreaterLabel).append(NL);
+                code.append(ifGreaterLabel).append(":").append(NL);
+                code.append("iconst_1").append(NL);
+                code.append(endGreaterLabel).append(":").append(NL);
                 break;
             case GTE:
-                if (rightOperand instanceof LiteralElement && ((LiteralElement) rightOperand).getLiteral().equals("0")) {
-                    code.append("ifge").append(NL);
-                } else {
-                    code.append("if_icmpge").append(NL);
-                }
+                String ifGteLabel = "if_gte_" + types.getCurrentTempLabel();
+                String endGteLabel = "end_comparison_" + types.getCurrentTempLabel();
+                code.append("if_icmpge ").append(ifGteLabel).append(NL);
+                code.append("iconst_0").append(NL);
+                code.append("goto ").append(endGteLabel).append(NL);
+                code.append(ifGteLabel).append(":").append(NL);
+                code.append("iconst_1").append(NL);
+                code.append(endGteLabel).append(":").append(NL);
                 break;
             case LTE:
-                if (rightOperand instanceof LiteralElement && ((LiteralElement) rightOperand).getLiteral().equals("0")) {
-                    code.append("ifle").append(NL);
-                } else {
-                    code.append("if_icmple").append(NL);
-                }
+                String ifLteLabel = "if_lte_" + types.getCurrentTempLabel();
+                String endLteLabel = "end_comparison_" + types.getCurrentTempLabel();
+                code.append("if_icmple ").append(ifLteLabel).append(NL);
+                code.append("iconst_0").append(NL);
+                code.append("goto ").append(endLteLabel).append(NL);
+                code.append(ifLteLabel).append(":").append(NL);
+                code.append("iconst_1").append(NL);
+                code.append(endLteLabel).append(":").append(NL);
                 break;
             case EQ:
-                if (rightOperand instanceof LiteralElement && ((LiteralElement) rightOperand).getLiteral().equals("0")) {
-                    code.append("ifeq").append(NL);
-                } else {
-                    code.append("if_icmpeq").append(NL);
-                }
+                String ifEqLabel = "if_eq_" + types.getCurrentTempLabel();
+                String endEqLabel = "end_comparison_" + types.getCurrentTempLabel();
+                code.append("if_icmpeq ").append(ifEqLabel).append(NL);
+                code.append("iconst_0").append(NL);
+                code.append("goto ").append(endEqLabel).append(NL);
+                code.append(ifEqLabel).append(":").append(NL);
+                code.append("iconst_1").append(NL);
+                code.append(endEqLabel).append(":").append(NL);
                 break;
             case NEQ:
-                if (rightOperand instanceof LiteralElement && ((LiteralElement) rightOperand).getLiteral().equals("0")) {
-                    code.append("ifne").append(NL);
-                } else {
-                    code.append("if_icmpne").append(NL);
-                }
+                String ifNeqLabel = "if_neq_" + types.getCurrentTempLabel();
+                String endNeqLabel = "end_comparison_" + types.getCurrentTempLabel();
+                code.append("if_icmpne ").append(ifNeqLabel).append(NL);
+                code.append("iconst_0").append(NL);
+                code.append("goto ").append(endNeqLabel).append(NL);
+                code.append(ifNeqLabel).append(":").append(NL);
+                code.append("iconst_1").append(NL);
+                code.append(endNeqLabel).append(":").append(NL);
                 break;
             default:
                 throw new NotImplementedException("Operation not implemented: " + opType);
@@ -575,11 +592,17 @@ public class JasminGenerator {
         var code = new StringBuilder();
         
         // First, load the object reference
-        code.append(apply(invokeSpecialInstruction.getCaller()));
+        Element caller = invokeSpecialInstruction.getCaller();
+        code.append(apply(caller));
         
         // Build the method signature with parameters
-        var caller = (Operand) invokeSpecialInstruction.getCaller();
-        var callerName = caller.getName();
+        String callerName;
+        if (caller instanceof Operand) {
+            callerName = ((Operand) caller).getName();
+        } else {
+            callerName = caller.toString();
+        }
+        
         var args = invokeSpecialInstruction.getArguments();
         var argTypes = new StringBuilder();
         
@@ -590,9 +613,24 @@ public class JasminGenerator {
         }
         
         // Generate the constructor invocation
-        code.append("invokespecial ")
-            .append(callerName)
-            .append("/<init>(")
+        code.append("invokespecial ");
+        
+        // Handle super() constructor calls specially
+        if (callerName.equals("super")) {
+            String superClass = ollirResult.getOllirClass().getSuperClass();
+            if (superClass == null) {
+                superClass = "java/lang/Object";
+            }
+            code.append(superClass);
+        } else if (caller.getType() instanceof org.specs.comp.ollir.type.ClassType) {
+            // Use the class type name if available
+            code.append(((org.specs.comp.ollir.type.ClassType) caller.getType()).getName());
+        } else {
+            // Otherwise use the caller name
+            code.append(callerName);
+        }
+        
+        code.append("/<init>(")
             .append(argTypes)
             .append(")V")
             .append(NL);
@@ -603,11 +641,33 @@ public class JasminGenerator {
     private String generateInvokeStaticInstruction(InvokeStaticInstruction invokeStaticInstruction) {
         var code = new StringBuilder();
 
-
-
+        // Get caller class name
         var caller = (Operand) invokeStaticInstruction.getCaller();
         var callerName = caller.getName();
-        var methodName = ((LiteralElement) invokeStaticInstruction.getMethodName()).getLiteral();
+        
+        // Get method name - try multiple approaches to handle different OLLIR formats
+        String methodName;
+        
+        // First try to get method name from the method name property
+        if (invokeStaticInstruction.getMethodName() != null) {
+            if (invokeStaticInstruction.getMethodName() instanceof LiteralElement) {
+                methodName = ((LiteralElement) invokeStaticInstruction.getMethodName()).getLiteral();
+            } else {
+                // If it's not a literal, try to get a string representation
+                methodName = invokeStaticInstruction.getMethodName().toString();
+            }
+        } else {
+            // Fall back to getting method name from the second operand if available
+            var operands = invokeStaticInstruction.getOperands();
+            if (operands.size() >= 2 && operands.get(1) instanceof LiteralElement) {
+                methodName = ((LiteralElement) operands.get(1)).getLiteral();
+            } else {
+                // Default to a placeholder if we can't determine the method name
+                methodName = "unknownMethod";
+            }
+        }
+        
+        // Process arguments
         var args = invokeStaticInstruction.getArguments();
         var argTypes = new StringBuilder();
 
@@ -616,6 +676,7 @@ public class JasminGenerator {
             code.append(apply(arg));
         }
 
+        // Generate invokestatic instruction
         code.append("invokestatic ");
         code.append(callerName)
                 .append("/").append(methodName).append("(").append(argTypes).append(")")
@@ -628,17 +689,40 @@ public class JasminGenerator {
         var code = new StringBuilder();
 
         var operands = putFieldInstruction.getOperands();
-
-        var className = ollirResult.getOllirClass().getClassName();
+        
+        // Get the object reference from first operand
+        Element firstOp = operands.get(0);
+        code.append(apply(firstOp));
+        
+        // Get field name from second operand
         var fieldOperand =(Operand) operands.get(1);
         var field = fieldOperand.getName();
-        var literalElement = operands.get(2);
-        var literalType = types.ollirToJasminType(literalElement.getType());
-        var pushCode = apply(literalElement);
-
-        code.append("aload 0").append(NL); //load the "this" value
-        code.append(pushCode).
-                append("putfield ").append(className).append("/").append(field).append(" ").append(literalType).append(NL);
+        
+        // Get value to store from third operand
+        var valueElement = operands.get(2);
+        code.append(apply(valueElement));
+        
+        // Determine the class name from the object type
+        String className;
+        if (firstOp instanceof Operand && ((Operand) firstOp).getName().equals("this")) {
+            className = ollirResult.getOllirClass().getClassName();
+        } else if (firstOp.getType() instanceof org.specs.comp.ollir.type.ClassType) {
+            className = ((org.specs.comp.ollir.type.ClassType) firstOp.getType()).getName();
+        } else {
+            className = ollirResult.getOllirClass().getClassName();
+        }
+        
+        // Get field type from the instruction - use the correct type
+        var fieldType = types.ollirToJasminType(putFieldInstruction.getFieldType());
+        
+        // Generate the putfield instruction
+        code.append("putfield ")
+            .append(className)
+            .append("/")
+            .append(field)
+            .append(" ")
+            .append(fieldType)
+            .append(NL);
 
         return code.toString();
     }
@@ -647,12 +731,34 @@ public class JasminGenerator {
         var code = new StringBuilder();
 
         var operands = getFieldInstruction.getOperands();
-        var className = ollirResult.getOllirClass().getClassName();
+        
+        // Get the object reference
+        Element firstOp = operands.get(0);
+        code.append(apply(firstOp));
+        
+        // Get the field name
         var fieldOperand = (Operand) operands.get(1);
+        var fieldName = fieldOperand.getName();
         var type = types.ollirToJasminType(getFieldInstruction.getFieldType());
-
-        code.append("aload 0").append(NL); //load the "this" value
-        code.append("getfield ").append(className).append("/").append(fieldOperand.getName()).append(" ").append(type).append(NL);
+        
+        // Get the class name
+        String className;
+        if (firstOp instanceof Operand && ((Operand) firstOp).getName().equals("this")) {
+            className = ollirResult.getOllirClass().getClassName();
+        } else if (firstOp.getType() instanceof org.specs.comp.ollir.type.ClassType) {
+            className = ((org.specs.comp.ollir.type.ClassType) firstOp.getType()).getName();
+        } else {
+            className = ollirResult.getOllirClass().getClassName();
+        }
+        
+        code.append("getfield ")
+            .append(className)
+            .append("/")
+            .append(fieldName)
+            .append(" ")
+            .append(type)
+            .append(NL);
+            
         return code.toString();
     }
 
@@ -669,7 +775,7 @@ public class JasminGenerator {
             Element rightOperand = binaryOp.getOperands().get(1);
             
             // For comparisons with zero, optimize the branch instruction
-            if (isComparisonWithZero(opType, rightOperand)) {
+            if (isComparisonWithZero(opType, rightOperand) && rightOperand instanceof LiteralElement) {
                 code.append(apply(leftOperand));
                 
                 // Use the appropriate conditional branch instruction
@@ -694,7 +800,6 @@ public class JasminGenerator {
                         break;
                     default:
                         // For other operations, use the default approach
-                        code.append(apply(condition));
                         code.append("ifne ").append(label).append(NL);
                 }
                 return code.toString();
@@ -724,12 +829,22 @@ public class JasminGenerator {
                     code.append("if_icmpne ").append(label).append(NL);
                     break;
                 default:
-                    // For other operations, use the default approach
-                    code.append(apply(condition));
+                    // For other operations, generate a normal comparison
                     code.append("ifne ").append(label).append(NL);
             }
+        } else if (condition instanceof SingleOpInstruction && ((SingleOpInstruction) condition).getSingleOperand() instanceof LiteralElement) {
+            // Handle literal boolean values inside SingleOpInstruction
+            SingleOpInstruction singleOp = (SingleOpInstruction) condition;
+            LiteralElement literalElement = (LiteralElement) singleOp.getSingleOperand();
+            String literal = literalElement.getLiteral();
+            
+            // For true literals, always branch; for false literals, never branch
+            if (literal.equals("true") || literal.equals("1")) {
+                code.append("goto ").append(label).append(NL);
+            }
+            // If false, do nothing - will fall through
         } else {
-            // For other types of conditions, use the default approach
+            // For other types of conditions, load the value and branch if nonzero
             code.append(apply(condition));
             code.append("ifne ").append(label).append(NL);
         }
@@ -751,6 +866,8 @@ public class JasminGenerator {
         // Load the array reference
         String baseName = arrayOperand.getName();
         var baseReg = currentMethod.getVarTable().get(baseName);
+        
+        // Arrays are always reference types, so use "a" prefix for loading the array reference
         code.append(types.getOptimizedLoad("a", baseReg.getVirtualReg())).append(NL);
         
         // Load the index
@@ -759,8 +876,15 @@ public class JasminGenerator {
             code.append(apply(indexElem));
         }
         
-        // Get the value from the array
-        String typePrefix = types.getTypePrefix(arrayOperand.getType());
+        // Get the value from the array - use the appropriate type prefix
+        // Determine element type based on array type
+        String typePrefix = "i"; // Default to int
+        Type type = arrayOperand.getType();
+        if (type instanceof org.specs.comp.ollir.type.ArrayType) {
+            Type elemType = ((org.specs.comp.ollir.type.ArrayType) type).getElementType();
+            typePrefix = types.getTypePrefix(elemType);
+        }
+        
         code.append(typePrefix + "aload").append(NL);
         
         return code.toString();
@@ -771,7 +895,8 @@ public class JasminGenerator {
         
         // Load the object reference (first operand)
         var operands = invokeVirtualInstruction.getOperands();
-        code.append(apply(operands.get(0)));
+        Element firstOp = operands.get(0);
+        code.append(apply(firstOp));
         
         // Load the method arguments
         var argTypes = new StringBuilder();
@@ -783,8 +908,24 @@ public class JasminGenerator {
         }
         
         // Generate the method call
-        var className = ((org.specs.comp.ollir.type.ClassType) operands.get(0).getType()).getName();
-        var methodName = ((LiteralElement) operands.get(1)).getLiteral();
+        String className;
+        if (firstOp.getType() instanceof org.specs.comp.ollir.type.ClassType) {
+            className = ((org.specs.comp.ollir.type.ClassType) firstOp.getType()).getName();
+        } else if (firstOp instanceof Operand) {
+            // If it's a named reference, try to get the class name from the variable name
+            className = ((Operand) firstOp).getName();
+        } else {
+            // Default to current class if we can't determine
+            className = ollirResult.getOllirClass().getClassName();
+        }
+        
+        String methodName;
+        if (operands.get(1) instanceof LiteralElement) {
+            methodName = ((LiteralElement) operands.get(1)).getLiteral();
+        } else {
+            methodName = operands.get(1).toString();
+        }
+        
         var returnType = types.ollirToJasminType(invokeVirtualInstruction.getReturnType());
         
         code.append("invokevirtual ")
