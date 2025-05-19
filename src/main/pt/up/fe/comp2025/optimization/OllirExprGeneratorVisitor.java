@@ -166,20 +166,29 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         String methodName = node.get("name");
         var firstChildType = types.getExprType(node.getChild(0)).getName();
         StringBuilder methodCall = new StringBuilder();
-        if(firstChildType.equals(table.getClassName())){
-            methodCall.append("invokevirtual(this.").append(table.getClassName()).append(", \"").append(methodName).append("\", ");
+        if(firstChildType.equals(table.getClassName()) && node.getChild(0).getKind().equals(THIS_EXPR.getNodeName())) {
+            methodCall.append("invokevirtual(this.").append(table.getClassName()).append(", \"").append(methodName).append("\"");
         }
         else{
-            String methodObject = "";
+            String methodObject = table.getClassName();
             for(var imp : table.getImports()){
-                if(imp.equals(node.getChild(0).get("name"))){
+                if(imp.equals(node.getChild(0).get("name")) || firstChildType.equals(imp)){
                     methodObject = imp;
                 }
             }
-            methodCall.append("invokestatic(").append(methodObject).append(", \"").append(methodName).append("\", ");
+            //for objects from the imports
+            if(node.getChild(0).getKind().equals(VAR_REF_EXPR.getNodeName()) && !firstChildType.equals("unknown")){
+                methodCall.append("invokevirtual(").append(node.getChild(0).get("name")).append(".").append(methodObject).append(", \"").append(methodName).append("\"");
+            }
+            else {
+                methodCall.append("invokestatic(").append(methodObject).append(", \"").append(methodName).append("\"");
+            }
         }
         StringBuilder args = new StringBuilder();
         for (int i = 1; i < node.getChildren().size(); i++ ) {
+            if(i == 1){
+                methodCall.append(", ");
+            }
             JmmNode child = node.getChildren().get(i);
             Type nodeType = types.getExprType(child);
             String ollirType = ollirTypes.toOllirType(nodeType);

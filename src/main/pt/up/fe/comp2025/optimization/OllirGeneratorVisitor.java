@@ -385,7 +385,6 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         String methodName = node.get("name");
         var firstChildType = types.getExprType(node.getChild(0)).getName();
         StringBuilder methodCall = new StringBuilder();
-        //objects from
         if(firstChildType.equals(table.getClassName()) && node.getChild(0).getKind().equals(THIS_EXPR.getNodeName())) {
             methodCall.append("invokevirtual(this.").append(table.getClassName()).append(", \"").append(methodName).append("\"");
         }

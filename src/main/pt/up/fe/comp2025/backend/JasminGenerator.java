@@ -64,6 +64,7 @@ public class JasminGenerator {
         generators.put(InvokeVirtualInstruction.class, this::generateInvokeVirtualInstruction);
         generators.put(ArrayOperand.class, this::generateArrayOperand);
         generators.put(GotoInstruction.class, this::generateGotoInstruction);
+        generators.put(UnaryOpInstruction.class, this::generateUnaryOpInstructions);
 
     }
 
@@ -191,6 +192,10 @@ public class JasminGenerator {
         code.append(TAB).append(".limit locals ").append(limitLocals).append(NL);
 
         for (var inst : method.getInstructions()) {
+            var labels = method.getLabels(inst);
+            for(var label: labels){
+                code.append(label).append(":").append(NL);
+            }
             var instCode = StringLines.getLines(apply(inst)).stream()
                     .collect(Collectors.joining(NL + TAB, TAB, NL));
 
@@ -940,6 +945,11 @@ public class JasminGenerator {
         
         return code.toString();
     }
+
+    private String generateUnaryOpInstructions(UnaryOpInstruction unaryOpInstruction) {
+        StringBuilder code = new StringBuilder();
+        return code.toString();
+    }
     
     /**
      * Calculate the maximum number of local variables needed for a method.
@@ -1035,4 +1045,6 @@ public class JasminGenerator {
         // A minimum stack size is necessary
         return Math.max(2, maxStack);
     }
+
+
 }
