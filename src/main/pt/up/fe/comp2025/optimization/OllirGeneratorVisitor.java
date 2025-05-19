@@ -385,17 +385,23 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         String methodName = node.get("name");
         var firstChildType = types.getExprType(node.getChild(0)).getName();
         StringBuilder methodCall = new StringBuilder();
-        if(firstChildType.equals(table.getClassName())){
+        if(firstChildType.equals(table.getClassName()) && node.getChild(0).getKind().equals(VAR_REF_EXPR.getNodeName())) {
             methodCall.append("invokevirtual(this.").append(table.getClassName()).append(", \"").append(methodName).append("\"");
         }
         else{
-            String methodObject = "";
+            String methodObject = table.getClassName();
             for(var imp : table.getImports()){
-                if(imp.equals(node.getChild(0).get("name"))){
+                if(imp.equals(node.getChild(0).get("name")) || firstChildType.equals(imp)){
                     methodObject = imp;
                 }
             }
-            methodCall.append("invokestatic(").append(methodObject).append(", \"").append(methodName).append("\"");
+            //for objects from the imports
+            if(node.getChild(0).getKind().equals(VAR_REF_EXPR.getNodeName()) && !firstChildType.equals("unknown")){
+                methodCall.append("invokevirtual(").append(node.getChild(0).get("name")).append(".").append(methodObject).append(", \"").append(methodName).append("\"");
+            }
+            else {
+                methodCall.append("invokestatic(").append(methodObject).append(", \"").append(methodName).append("\"");
+            }
         }
         StringBuilder args = new StringBuilder();
         for (int i = 1; i < node.getChildren().size(); i++ ) {
