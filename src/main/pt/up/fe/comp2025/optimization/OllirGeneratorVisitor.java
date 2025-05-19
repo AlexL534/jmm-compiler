@@ -386,7 +386,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         var firstChildType = types.getExprType(node.getChild(0)).getName();
         StringBuilder methodCall = new StringBuilder();
         if(firstChildType.equals(table.getClassName())){
-            methodCall.append("invokevirtual(this.").append(table.getClassName()).append(", \"").append(methodName).append("\", ");
+            methodCall.append("invokevirtual(this.").append(table.getClassName()).append(", \"").append(methodName).append("\"");
         }
         else{
             String methodObject = "";
@@ -395,10 +395,13 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
                     methodObject = imp;
                 }
             }
-            methodCall.append("invokestatic(").append(methodObject).append(", \"").append(methodName).append("\", ");
+            methodCall.append("invokestatic(").append(methodObject).append(", \"").append(methodName).append("\"");
         }
         StringBuilder args = new StringBuilder();
         for (int i = 1; i < node.getChildren().size(); i++ ) {
+            if(i == 1) {
+                methodCall.append(", ");
+            }
             JmmNode child = node.getChildren().get(i);
             var kind = child.getKind();
 
