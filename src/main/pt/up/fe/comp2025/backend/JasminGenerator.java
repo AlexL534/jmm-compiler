@@ -948,6 +948,10 @@ public class JasminGenerator {
 
     private String generateUnaryOpInstructions(UnaryOpInstruction unaryOpInstruction) {
         StringBuilder code = new StringBuilder();
+        Operand op = (Operand) unaryOpInstruction.getOperand();
+        code.append(apply(op));
+        code.append("iconst_1").append(NL);
+        code.append("ixor").append(NL);
         return code.toString();
     }
     
