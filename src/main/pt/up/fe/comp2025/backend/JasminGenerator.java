@@ -329,7 +329,7 @@ public class JasminGenerator {
             }
         } else if (typeStr.equals("BOOLEAN")) {
             // For booleans, convert true/false to 1/0
-            if (literal.getLiteral().equals("true")) {
+            if (literal.getLiteral().equals("1")) {
                 return "iconst_1" + NL;
             } else {
                 return "iconst_0" + NL;
