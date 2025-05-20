@@ -65,12 +65,13 @@ public class JasminGenerator {
         generators.put(ArrayOperand.class, this::generateArrayOperand);
         generators.put(GotoInstruction.class, this::generateGotoInstruction);
         generators.put(UnaryOpInstruction.class, this::generateUnaryOpInstructions);
+        generators.put(ArrayLengthInstruction.class, this::generateArrayLengthInstruction);
 
     }
 
     private String apply(TreeNode node) {
         var code = new StringBuilder();
-
+        
         // Print the corresponding OLLIR code as a comment
         //code.append("; ").append(node).append(NL);
 
@@ -280,9 +281,16 @@ public class JasminGenerator {
             // Get the value to store
             code.append(apply(rhs));
             
-            // Store the value in the array
-            // For arrays, we'll use the corresponding primitive type
-            String typePrefix = "i"; // Default to int for array storage
+            // Store the value in the array - use the appropriate type prefix
+            // Determine element type based on array type
+            String typePrefix = "i"; // Default to int
+            
+            // Try to determine from the array type
+            if (arrayOp.getType() instanceof org.specs.comp.ollir.type.ArrayType) {
+                Type elemType = ((org.specs.comp.ollir.type.ArrayType) arrayOp.getType()).getElementType();
+                typePrefix = types.getTypePrefix(elemType);
+            }
+            
             code.append(typePrefix + "astore").append(NL);
             
             return code.toString();
@@ -340,8 +348,51 @@ public class JasminGenerator {
     }
 
     private String generateOperand(Operand operand) {
-        // get register
-        var reg = currentMethod.getVarTable().get(operand.getName());
+        String operandName = operand.getName();
+        
+        // Special case for "this" reference - always in register 0
+        if (operandName.equals("this")) {
+            return "aload_0" + NL;
+        }
+        
+        // Handle class names specially
+        if (operand.getType() instanceof org.specs.comp.ollir.type.ClassType) {
+            org.specs.comp.ollir.type.ClassType classType = (org.specs.comp.ollir.type.ClassType) operand.getType();
+            // If the operand name matches the class type name, it's likely a class reference for static calls
+            if (operandName.equals(classType.getName())) {
+                // For class references in static contexts, we don't need to generate any code
+                return "";
+            }
+        }
+        
+        // Try to get the register from the variable table
+        var reg = currentMethod.getVarTable().get(operandName);
+        
+        // Handle case where operand is not in the variable table
+        if (reg == null) {
+            // It could be a field of the current class
+            for (Field field : ollirResult.getOllirClass().getFields()) {
+                if (field.getFieldName().equals(operandName)) {
+                    // Load "this" and then get the field
+                    return "aload_0" + NL + 
+                           "getfield " + ollirResult.getOllirClass().getClassName() + 
+                           "/" + operandName + " " + types.ollirToJasminType(field.getFieldType()) + NL;
+                }
+            }
+            
+            // If it's an imported class (static reference)
+            for (String importedClass : ollirResult.getOllirClass().getImports()) {
+                if (importedClass.endsWith("." + operandName) || importedClass.equals(operandName)) {
+                    // For imported class references in static contexts, no code is needed
+                    return "";
+                }
+            }
+            
+            // Last resort: if it's a class name (for new instructions or static calls)
+            return "";
+        }
+        
+        // Get the register number
         int virtualReg = reg.getVirtualReg();
         
         // Get the appropriate prefix based on type
@@ -566,12 +617,28 @@ public class JasminGenerator {
             // For arrays, we need the size first
             var operands = newInstruction.getOperands();
             if (operands.size() > 0) {
-                // Load the array size
-                code.append(apply(operands.get(0)));
+                // Load the array size onto the stack
+                // For temp variables where the size is stored, load them
+                Element sizeOperand = operands.get(0);
+                if (sizeOperand instanceof Operand) {
+                    // If the size is stored in a variable, load it
+                    Operand op = (Operand) sizeOperand;
+                    var reg = currentMethod.getVarTable().get(op.getName());
+                    if (reg != null) {
+                        int virtualReg = reg.getVirtualReg();
+                        code.append(types.getOptimizedLoad("i", virtualReg)).append(NL);
+                    } else {
+                        // If not in the var table, try to evaluate as a literal
+                        code.append(apply(sizeOperand));
+                    }
+                } else {
+                    // For literals or other expressions, just apply them
+                    code.append(apply(sizeOperand));
+                }
             }
             
             // Create the array of the appropriate type
-            if (typeStr.equals("INT32[]")) {
+            if (typeStr.equals("INT32[]") || typeStr.equals("I32[]")) {
                 code.append("newarray int").append(NL);
             } else if (typeStr.equals("BOOLEAN[]")) {
                 code.append("newarray boolean").append(NL);
@@ -579,6 +646,23 @@ public class JasminGenerator {
                 // For object arrays
                 String className = ((org.specs.comp.ollir.type.ClassType) callerType).getName().replace("[]", "");
                 code.append("anewarray ").append(className).append(NL);
+            } else if (callerType instanceof org.specs.comp.ollir.type.ArrayType) {
+                // For multi-dimensional arrays
+                Type elemType = ((org.specs.comp.ollir.type.ArrayType) callerType).getElementType();
+                if (elemType instanceof org.specs.comp.ollir.type.ClassType) {
+                    String className = ((org.specs.comp.ollir.type.ClassType) elemType).getName();
+                    code.append("anewarray ").append(className).append(NL);
+                } else {
+                    String elemTypeStr = elemType.toString();
+                    if (elemTypeStr.equals("INT32") || elemTypeStr.equals("I32")) {
+                        code.append("newarray int").append(NL);
+                    } else if (elemTypeStr.equals("BOOLEAN")) {
+                        code.append("newarray boolean").append(NL);
+                    } else {
+                        // Default to int array if type is unknown or primitive
+                        code.append("newarray int").append(NL);
+                    }
+                }
             } else {
                 // Default to int array if type is unknown
                 code.append("newarray int").append(NL);
@@ -870,10 +954,37 @@ public class JasminGenerator {
         
         // Load the array reference
         String baseName = arrayOperand.getName();
-        var baseReg = currentMethod.getVarTable().get(baseName);
         
-        // Arrays are always reference types, so use "a" prefix for loading the array reference
-        code.append(types.getOptimizedLoad("a", baseReg.getVirtualReg())).append(NL);
+        // Handle method parameters specially
+        int paramIndex = -1;
+        for (int i = 0; i < currentMethod.getParams().size(); i++) {
+            Element param = currentMethod.getParams().get(i);
+            if (param instanceof Operand && ((Operand) param).getName().equals(baseName)) {
+                paramIndex = i;
+                break;
+            }
+        }
+        
+        if (paramIndex >= 0) {
+            // It's a parameter, load it directly based on its position
+            int virtualReg = paramIndex + (currentMethod.isStaticMethod() ? 0 : 1);  // Adjust for non-static methods
+            code.append(types.getOptimizedLoad("a", virtualReg)).append(NL);
+        } else {
+            // Try the variable table
+            var baseReg = currentMethod.getVarTable().get(baseName);
+            
+            // Check if array reference is in the variable table
+            if (baseReg == null) {
+                // Could be a special case, like a field
+                // For now, assume it's a field of "this"
+                code.append("aload_0").append(NL);
+                code.append("getfield ").append(ollirResult.getOllirClass().getClassName())
+                    .append("/").append(baseName).append(" [I").append(NL);
+            } else {
+                // Arrays are always reference types, so use "a" prefix for loading the array reference
+                code.append(types.getOptimizedLoad("a", baseReg.getVirtualReg())).append(NL);
+            }
+        }
         
         // Load the index
         var indexOperands = arrayOperand.getIndexOperands();
@@ -888,6 +999,20 @@ public class JasminGenerator {
         if (type instanceof org.specs.comp.ollir.type.ArrayType) {
             Type elemType = ((org.specs.comp.ollir.type.ArrayType) type).getElementType();
             typePrefix = types.getTypePrefix(elemType);
+        } else if (type instanceof org.specs.comp.ollir.type.ClassType) {
+            // If it's a class type array, use 'a' for reference
+            String typeName = ((org.specs.comp.ollir.type.ClassType) type).getName();
+            if (typeName.endsWith("[]")) {
+                typePrefix = "a";
+            }
+        } else if (type != null) {
+            String typeStr = type.toString();
+            if (typeStr.equals("BOOLEAN[]")) {
+                typePrefix = "i"; // boolean values are still stored as integers (0/1)
+            } else if (typeStr.endsWith("[]")) {
+                // Any other array type would likely need 'a' for references
+                typePrefix = "a";
+            }
         }
         
         code.append(typePrefix + "aload").append(NL);
@@ -955,6 +1080,25 @@ public class JasminGenerator {
         return code.toString();
     }
     
+    private String generateArrayLengthInstruction(ArrayLengthInstruction arrayLengthInstruction) {
+        StringBuilder code = new StringBuilder();
+        
+        // Load the array reference - first operand should be the array
+        if (arrayLengthInstruction.getOperands() != null && !arrayLengthInstruction.getOperands().isEmpty()) {
+            Element arrayRef = arrayLengthInstruction.getOperands().get(0);
+            code.append(apply(arrayRef));
+            
+            // Get the length of the array
+            code.append("arraylength").append(NL);
+        } else {
+            // Fallback if no operands are available
+            System.err.println("Warning: ArrayLengthInstruction with no operands");
+            code.append("; ERROR: No operands for array length").append(NL);
+        }
+        
+        return code.toString();
+    }
+    
     /**
      * Calculate the maximum number of local variables needed for a method.
      */
@@ -993,6 +1137,31 @@ public class JasminGenerator {
      * stack depths for each instruction.
      */
     private int calculateLimitStack(Method method) {
+        // For simple methods, ensure a minimum stack size
+        if (method.getInstructions().size() < 2) {
+            return 2;
+        }
+        
+        // For array operations, we use a larger stack to be safe
+        for (Instruction instruction : method.getInstructions()) {
+            if (instruction instanceof ArrayLengthInstruction || 
+                (instruction instanceof AssignInstruction && ((AssignInstruction)instruction).getDest() instanceof ArrayOperand) ||
+                (instruction instanceof NewInstruction && 
+                 ((NewInstruction)instruction).getCaller().getType().toString().endsWith("[]"))) {
+                return 3; // Arrays typically need 3 stack slots at minimum
+            }
+            
+            // Check for virtual method calls which need more stack space
+            if (instruction instanceof InvokeVirtualInstruction) {
+                InvokeVirtualInstruction invoke = (InvokeVirtualInstruction) instruction;
+                if (invoke.getOperands().size() > 3) {  // If more than 2 args + object
+                    return Math.max(4, invoke.getOperands().size());
+                }
+                return 3;
+            }
+        }
+        
+        // Default stack calculation for other methods
         int maxStack = 0;
         int currentStack = 0;
         
@@ -1001,9 +1170,14 @@ public class JasminGenerator {
             if (instruction instanceof AssignInstruction) {
                 AssignInstruction assign = (AssignInstruction) instruction;
                 Instruction rhs = assign.getRhs();
+                Element lhs = assign.getDest();
                 
+                // For array assignments (a[i] = x), we need array ref + index + value
+                if (lhs instanceof ArrayOperand) {
+                    currentStack = Math.max(3, currentStack);
+                }
                 // Handle different types of right-hand side expressions
-                if (rhs instanceof BinaryOpInstruction) {
+                else if (rhs instanceof BinaryOpInstruction) {
                     // Binary operations pop 2 values and push 1
                     currentStack = Math.max(2, currentStack); // Need at least 2 slots
                 } else if (rhs instanceof NewInstruction) {
@@ -1023,6 +1197,9 @@ public class JasminGenerator {
                     // Static method calls need space for all arguments
                     int argCount = ((InvokeStaticInstruction) rhs).getOperands().size() - 1; // -1 for class name
                     currentStack = Math.max(argCount, currentStack);
+                } else if (rhs instanceof ArrayLengthInstruction) {
+                    // Array length needs array reference
+                    currentStack = Math.max(1, currentStack);
                 } else {
                     // Simple expression (literal, variable)
                     currentStack = Math.max(1, currentStack);
@@ -1041,6 +1218,10 @@ public class JasminGenerator {
             else if (instruction instanceof PutFieldInstruction || instruction instanceof GetFieldInstruction) {
                 // Field access needs ref + value for put, just ref for get
                 currentStack = Math.max(2, currentStack); 
+            }
+            else if (instruction instanceof ArrayLengthInstruction) {
+                // Array length operation needs array reference
+                currentStack = Math.max(1, currentStack);
             }
             
             maxStack = Math.max(maxStack, currentStack);
