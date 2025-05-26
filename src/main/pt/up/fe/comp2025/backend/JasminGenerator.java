@@ -3,6 +3,8 @@ package pt.up.fe.comp2025.backend;
 import org.specs.comp.ollir.*;
 import org.specs.comp.ollir.inst.*;
 import org.specs.comp.ollir.tree.TreeNode;
+import org.specs.comp.ollir.type.ArrayType;
+import org.specs.comp.ollir.type.BuiltinType;
 import org.specs.comp.ollir.type.Type;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
 import pt.up.fe.comp.jmm.report.Report;
@@ -263,24 +265,24 @@ public class JasminGenerator {
                 }
             }
         }
-        
+
         // Array assignment case: a[i] = x
         if (lhs instanceof ArrayOperand) {
             ArrayOperand arrayOp = (ArrayOperand) lhs;
-            
+
             // Get the array reference
             String baseName = arrayOp.getName();
             var baseReg = currentMethod.getVarTable().get(baseName);
             code.append(types.getOptimizedLoad("a", baseReg.getVirtualReg())).append(NL);
             
-            // Get the index 
+            // Get the index
             for (Element indexElem : arrayOp.getIndexOperands()) {
                 code.append(apply(indexElem));
             }
-            
+
             // Get the value to store
             code.append(apply(rhs));
-            
+
             // Store the value in the array - use the appropriate type prefix
             // Determine element type based on array type
             String typePrefix = "i"; // Default to int
@@ -292,7 +294,22 @@ public class JasminGenerator {
             }
             
             code.append(typePrefix + "astore").append(NL);
-            
+
+            return code.toString();
+        }
+
+        //Assign for array references. EX: a.I32[] :=.I32 new ......
+        if (lhs.getType() instanceof ArrayType) {
+            Operand arrayOp = (Operand) lhs;
+
+            // Get the value to store
+            code.append(apply(rhs));
+
+            // Get the array reference
+            String baseName = arrayOp.getName();
+            var baseReg = currentMethod.getVarTable().get(baseName);
+            code.append(types.getOptimizedStore("a", baseReg.getVirtualReg())).append(NL);
+
             return code.toString();
         }
         
@@ -619,7 +636,7 @@ public class JasminGenerator {
             if (operands.size() > 0) {
                 // Load the array size onto the stack
                 // For temp variables where the size is stored, load them
-                Element sizeOperand = operands.get(0);
+                Element sizeOperand = operands.get(1);
                 if (sizeOperand instanceof Operand) {
                     // If the size is stored in a variable, load it
                     Operand op = (Operand) sizeOperand;
@@ -628,8 +645,7 @@ public class JasminGenerator {
                         int virtualReg = reg.getVirtualReg();
                         code.append(types.getOptimizedLoad("i", virtualReg)).append(NL);
                     } else {
-                        // If not in the var table, try to evaluate as a literal
-                        code.append(apply(sizeOperand));
+                        // If not in the var table, try to evaluate as a literalcode.append(apply(sizeOperand));
                     }
                 } else {
                     // For literals or other expressions, just apply them
@@ -667,6 +683,7 @@ public class JasminGenerator {
                 // Default to int array if type is unknown
                 code.append("newarray int").append(NL);
             }
+
         } else {
             // For objects, just create the object
             code.append("new ").append(caller.getName()).append(NL);
