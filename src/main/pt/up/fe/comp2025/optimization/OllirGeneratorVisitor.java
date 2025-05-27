@@ -140,6 +140,7 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
 
         StringBuilder code = new StringBuilder();
 
+        //special assignment for new objects and object creation
         if (node.getChild(0).getKind().equals(NEW_OBJECT.getNodeName()) ||
                 node.getChild(0).getKind().equals(OBJECT_CREATION.getNodeName())) {
 
@@ -159,6 +160,35 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
                     .append(END_STMT);
 
             return code.toString();
+        }
+
+        //inline binary expression (does not need a temp variable)
+        if(node.getChild(0).getKind().equals(BINARY_EXPR.getNodeName())){
+            var binExpr = node.getChild(0);
+            var rExpr = binExpr.getChild(0);
+            var lExpr = binExpr.getChild(1);
+
+            if((rExpr.getKind().equals(INTEGER_LITERAL.getNodeName()) || rExpr.getKind().equals(VAR_REF_EXPR.getNodeName()))
+                && (lExpr.getKind().equals(INTEGER_LITERAL.getNodeName()) || lExpr.getKind().equals(VAR_REF_EXPR.getNodeName()))
+            ){
+                Type thisType = types.getExprType(node);
+                String typeString = ollirTypes.toOllirType(thisType);
+                String varName = node.get("varName");
+                var varCode = varName + typeString;
+                code.append(varCode);
+                code.append(SPACE);
+                code.append(ASSIGN);
+                code.append(typeString);
+                code.append(SPACE);
+                code.append(exprVisitor.visit(rExpr).getCode());
+                code.append(binExpr.get("op"));
+                code.append(typeString);
+                code.append(SPACE);
+                code.append(exprVisitor.visit(lExpr).getCode());
+                code.append(END_STMT);
+
+                return code.toString();
+            }
         }
 
         // code to compute the children

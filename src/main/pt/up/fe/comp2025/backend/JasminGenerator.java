@@ -458,6 +458,7 @@ public class JasminGenerator {
         if (opType == OperationType.ANDB || opType == OperationType.ORB) {
             return generateBooleanOperation(opType, leftOperand, rightOperand);
         }
+        
 
         // For normal operations, load both operands
         code.append(apply(leftOperand));
