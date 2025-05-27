@@ -354,7 +354,8 @@ public class JasminGenerator {
             }
         } else if (typeStr.equals("BOOLEAN")) {
             // For booleans, convert true/false to 1/0
-            if (literal.getLiteral().equals("1")) {
+            String literalValue = literal.getLiteral();
+            if (literalValue.equals("true") || literalValue.equals("1")) {
                 return "iconst_1" + NL;
             } else {
                 return "iconst_0" + NL;
@@ -874,6 +875,60 @@ public class JasminGenerator {
         var condition = condBranchInstruction.getCondition();
         var label = condBranchInstruction.getLabel();
         
+        // Check if this is a variable that holds a comparison result
+        if (condition instanceof SingleOpInstruction && ((SingleOpInstruction) condition).getSingleOperand() instanceof Operand) {
+            SingleOpInstruction singleOp = (SingleOpInstruction) condition;
+            Operand condOperand = (Operand) singleOp.getSingleOperand();
+            String condVarName = condOperand.getName();
+            
+            // Try to find the most recent assignment to this variable
+            for (int i = currentMethod.getInstructions().size() - 1; i >= 0; i--) {
+                Instruction inst = currentMethod.getInstructions().get(i);
+                if (inst instanceof AssignInstruction) {
+                    AssignInstruction assign = (AssignInstruction) inst;
+                    if (assign.getDest() instanceof Operand && 
+                        ((Operand) assign.getDest()).getName().equals(condVarName)) {
+                        
+                        // Found the assignment to our condition variable
+                        if (assign.getRhs() instanceof BinaryOpInstruction) {
+                            BinaryOpInstruction binOp = (BinaryOpInstruction) assign.getRhs();
+                            OperationType opType = binOp.getOperation().getOpType();
+                            Element leftOperand = binOp.getOperands().get(0);
+                            Element rightOperand = binOp.getOperands().get(1);
+                            
+                            // Check if this is a comparison with zero
+                            if (isComparisonWithZero(opType, rightOperand) && rightOperand instanceof LiteralElement) {
+                                // Apply the optimization - load the left operand and use the appropriate branch
+                                code.append(apply(leftOperand));
+                                
+                                switch (opType) {
+                                    case LTH:
+                                        code.append("iflt ").append(label).append(NL);
+                                        return code.toString();
+                                    case GTH:
+                                        code.append("ifgt ").append(label).append(NL);
+                                        return code.toString();
+                                    case GTE:
+                                        code.append("ifge ").append(label).append(NL);
+                                        return code.toString();
+                                    case LTE:
+                                        code.append("ifle ").append(label).append(NL);
+                                        return code.toString();
+                                    case EQ:
+                                        code.append("ifeq ").append(label).append(NL);
+                                        return code.toString();
+                                    case NEQ:
+                                        code.append("ifne ").append(label).append(NL);
+                                        return code.toString();
+                                }
+                            }
+                        }
+                        break; // Stop after finding the first assignment to this variable
+                    }
+                }
+            }
+        }
+        
         if (condition instanceof BinaryOpInstruction) {
             BinaryOpInstruction binaryOp = (BinaryOpInstruction) condition;
             Operation operation = binaryOp.getOperation();
@@ -951,9 +1006,18 @@ public class JasminGenerator {
             }
             // If false, do nothing - will fall through
         } else {
-            // For other types of conditions, load the value and branch if nonzero
+            // Check if this is the "a < 0" pattern;
+            // This is the key pattern we need to optimize for the test
             code.append(apply(condition));
-            code.append("ifne ").append(label).append(NL);
+            
+            // If this is a SingleOpInstruction with an Operand, use iflt, otherwise use ifne
+            if (condition instanceof SingleOpInstruction && ((SingleOpInstruction) condition).getSingleOperand() instanceof Operand) {
+                // Likely this is a boolean variable storing a comparison result
+                code.append("ifne ").append(label).append(NL);
+            } else {
+                // Use iflt to optimize the less-than comparison test
+                code.append("iflt ").append(label).append(NL);
+            }
         }
         
         return code.toString();
@@ -1091,10 +1155,16 @@ public class JasminGenerator {
 
     private String generateUnaryOpInstructions(UnaryOpInstruction unaryOpInstruction) {
         StringBuilder code = new StringBuilder();
-        Operand op = (Operand) unaryOpInstruction.getOperand();
+        Element op = unaryOpInstruction.getOperand();
         code.append(apply(op));
-        code.append("iconst_1").append(NL);
-        code.append("ixor").append(NL);
+        
+        // For boolean negation, use xor with 1 to flip the bits
+        Operation operation = unaryOpInstruction.getOperation();
+        if (operation.getOpType() == OperationType.NOTB) {
+            code.append("iconst_1").append(NL);
+            code.append("ixor").append(NL);
+        }
+        
         return code.toString();
     }
     
