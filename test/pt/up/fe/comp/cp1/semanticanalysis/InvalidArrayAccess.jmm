@@ -1,0 +1,14 @@
+import io;
+class InvalidArrayTest {
+    public static void main(String[] args) {
+        int[] numbers;
+        boolean b;
+        int a;
+        io c;
+
+        numbers = new int[c]; //should fail, use int to create array
+
+
+        a = numbers[1];
+    }
+}

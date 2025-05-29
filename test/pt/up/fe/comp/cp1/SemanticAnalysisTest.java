@@ -418,6 +418,13 @@ public class SemanticAnalysisTest {
     }
 
     @Test
+    public void invalidArrayAccessTest() {
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/InvalidArrayAccess.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
     public void duplicateImports() {
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/DuplicateImports.jmm"));
         TestUtils.mustFail(result);
