@@ -221,7 +221,7 @@ public class JasminGenerator {
         // Check for special case of i = i + 1 which can be optimized to iinc
         if (lhs instanceof Operand && rhs instanceof BinaryOpInstruction) {
             BinaryOpInstruction binOp = (BinaryOpInstruction) rhs;
-            if (binOp.getOperation().getOpType() == OperationType.ADD) {
+            if ((binOp.getOperation().getOpType() == OperationType.ADD) || (binOp.getOperation().getOpType() == OperationType.SUB)) {
                 var operands = binOp.getOperands();
                 Element leftOperand = operands.get(0);
                 Element rightOperand = operands.get(1);
@@ -246,7 +246,7 @@ public class JasminGenerator {
                 }
                 
                 // Check if i = 1 + i pattern
-                if (leftOperand instanceof LiteralElement && rightOperand instanceof Operand) {
+                if (leftOperand instanceof LiteralElement && rightOperand instanceof Operand && binOp.getOperation().getOpType() != OperationType.SUB) {
                     LiteralElement leftLit = (LiteralElement) leftOperand;
                     Operand rightOp = (Operand) rightOperand;
                     
@@ -265,6 +265,7 @@ public class JasminGenerator {
                 }
             }
         }
+
 
         // Array assignment case: a[i] = x
         if (lhs instanceof ArrayOperand) {

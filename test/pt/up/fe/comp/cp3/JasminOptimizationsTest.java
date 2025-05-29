@@ -101,6 +101,30 @@ public class JasminOptimizationsTest {
 
     }
 
+    @Test
+    public void section1_InstSelection_iinc2() {
+        JasminResult jasminResult = getJasminResult("InstSelection_iinc4.jmm");
+        CpUtils.matches(jasminResult, "iinc\\s+\\w+\\s+1");
+
+    }
+
+    /**
+     * Test if iinc is used when incrementing a variable
+     */
+    @Test
+    public void section1_InstSelection_iinc_sub() {
+        JasminResult jasminResult = getJasminResult("InstSelection_iinc2.jmm");
+        CpUtils.matches(jasminResult, "iinc\\s+\\w+\\s+1");
+
+    }
+
+    @Test
+    public void section1_InstSelection_iinc_sub_wrong() {
+        JasminResult jasminResult = getJasminResult("InstSelection_iinc3.jmm");
+        CpUtils.matches(jasminResult, "^(?!iinc\\s+\\w+\\s+1).*");
+
+    }
+
     /**
      * Test if iload_1 is used.
      */
