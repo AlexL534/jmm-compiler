@@ -158,6 +158,11 @@ public class JasminTest {
         CpUtils.runJasmin(getJasminResult("control_flow/IfWhileNested.ollir"), "Result: 1\nResult: 2\nResult: 1");
     }
 
+    @Test
+    public void section3_ControlFlow_Comp_With_Zero() {
+        CpUtils.runJasmin(getJasminResult("control_flow/IfCompWithZero.ollir"), "Result: 5");
+    }
+
     /*checks if the code of a call to a function with multiple arguments (using boolean expressions in the call) is
     well executed*/
     @Test
