@@ -30,6 +30,26 @@ public class SemanticAnalysisTest {
     }
 
     @Test
+    public void classNotImportedVarDeclaration() {
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ClassNotImportedVarDecl.jmm"));
+
+        // Debugging output to verify reports are being generated
+        System.out.println("Reports: " + result.getReports());
+
+        TestUtils.mustFail(result);
+    }
+
+    @Test
+    public void classNotImportedParams() {
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ClassNotImportedParams.jmm"));
+
+        // Debugging output to verify reports are being generated
+        System.out.println("Reports: " + result.getReports());
+
+        TestUtils.mustFail(result);
+    }
+
+    @Test
     public void intPlusObject() {
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/IntPlusObject.jmm"));
         TestUtils.mustFail(result);

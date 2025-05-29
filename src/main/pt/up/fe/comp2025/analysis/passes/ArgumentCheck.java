@@ -37,6 +37,30 @@ public class ArgumentCheck extends AnalysisVisitor {
 
         for (int i = 0; i < parameters.size(); i++) {
             Symbol param = parameters.get(i);
+
+            //check if the type of the param is valid
+            String typeName = param.getType().getName();
+            boolean foundImp = false;
+            for(var imp : table.getImports()){
+                var impSubstring = imp.split("\\.");
+                if(typeName.equals(impSubstring[impSubstring.length - 1].strip())){
+                    foundImp = true;
+                    break;
+                }
+            }
+            if(!typeName.equals(table.getClassName()) && !typeName.equals(table.getSuper()) && !typeName.equals("int") && !typeName.equals("boolean") && !typeName.equals("String") && !typeName.equals("int vararg") && !foundImp){
+                var message = String.format("Unsupported variable type: %s", typeName);
+                addReport(Report.newError(
+                        Stage.SEMANTIC,
+                        method.getLine(),
+                        method.getColumn(),
+                        message,
+                        null)
+                );
+                return null;
+            }
+
+
             boolean isVararg = param.getType().getName().endsWith(" vararg");
 
             if (isVararg) {

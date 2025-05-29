@@ -24,7 +24,6 @@ public class ReturnStmt extends AnalysisVisitor {
         return null;
     }
 
-
     private Void visitReturnStmt(JmmNode returnStmt, SymbolTable table) {
         TypeUtils utils = new TypeUtils(table);
         utils.setCurrentMethod(currentMethod);

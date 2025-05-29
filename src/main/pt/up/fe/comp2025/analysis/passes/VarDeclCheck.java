@@ -6,14 +6,15 @@ import pt.up.fe.comp.jmm.report.Report;
 import pt.up.fe.comp.jmm.report.Stage;
 import pt.up.fe.comp2025.analysis.AnalysisVisitor;
 import pt.up.fe.comp2025.ast.Kind;
+import pt.up.fe.comp2025.ast.TypeUtils;
 
 public class VarDeclCheck extends AnalysisVisitor {
     private String currentMethod;
 
     @Override
     public void buildVisitor() {
-        addVisit(Kind.METHOD_DECL, this::visitMethodDecl);
         addVisit(Kind.VAR_DECL, this::visitVarDecl);
+        addVisit(Kind.METHOD_DECL, this::visitMethodDecl);
     }
 
     private Void visitMethodDecl(JmmNode method, SymbolTable table) {
@@ -35,6 +36,39 @@ public class VarDeclCheck extends AnalysisVisitor {
                 );
             }
         }
+
+        TypeUtils utils = new TypeUtils(table);
+        utils.setCurrentMethod(currentMethod);
+        String typeName = utils.getExprType(varDecl).getName();
+
+    for(var imp : table.getImports()){
+        var impSubstring = imp.split("\\.");
+        if(typeName.equals(impSubstring[impSubstring.length - 1].strip())){
+            return null;
+        }
+    }
+    if(typeName.equals(table.getClassName())){
+        return null;
+    }
+    if(typeName.equals(table.getSuper())){
+        return null;
+    }
+    if(typeName.equals("int")){
+        return null;
+    }
+    if(typeName.equals("boolean")){
+        return null;
+    }
+
+    var message = String.format("Unsupported variable type: %s", typeName);
+    addReport(Report.newError(
+            Stage.SEMANTIC,
+            varDecl.getLine(),
+            varDecl.getColumn(),
+            message,
+            null)
+    );
+
         return null;
     }
 }
