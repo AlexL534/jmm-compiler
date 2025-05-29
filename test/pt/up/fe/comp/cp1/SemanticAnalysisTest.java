@@ -50,6 +50,13 @@ public class SemanticAnalysisTest {
     }
 
     @Test
+    public void callMethodFromClass() {
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/CallMethodFromClass.jmm"));
+
+        TestUtils.noErrors(result);
+    }
+
+    @Test
     public void intPlusObject() {
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/IntPlusObject.jmm"));
         TestUtils.mustFail(result);
