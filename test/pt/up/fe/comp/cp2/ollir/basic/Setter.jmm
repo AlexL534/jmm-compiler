@@ -1,0 +1,19 @@
+import io;
+import Quicksort;
+
+class CompileBasic extends Quicksort {
+
+    int intField;
+    boolean boolField;
+
+    public int method3(int value) {
+
+        intField = intField + 1;
+
+        return intField;
+    }
+
+
+    public static void main(String[] args) {
+    }
+}

@@ -98,6 +98,52 @@ public class OllirTest {
         assertTrue("Expected 1 putfield instruction in method3, found " + method3PutField.size(), method3PutField.size() == 1);
     }
 
+    public void compileBasicGetters(OllirResult ollirResult) {
+
+        ClassUnit classUnit = ollirResult.getOllirClass();
+
+        // Test name of the class and super
+        assertEquals("Class name not what was expected", "CompileBasic", classUnit.getClassName());
+        assertEquals("Super class name not what was expected", "Quicksort", classUnit.getSuperClass());
+
+        // Test fields
+        assertEquals("Class should have two fields", 2, classUnit.getNumFields());
+        var fieldNames = new HashSet<>(Arrays.asList("intField", "boolField"));
+        assertThat(fieldNames, hasItem(classUnit.getField(0).getFieldName()));
+        assertThat(fieldNames, hasItem(classUnit.getField(1).getFieldName()));
+
+        // Test method 3
+        var method3 = CpUtils.getMethod(ollirResult, "method3");
+        assertNotNull("Could not find method3'", method3);
+
+        var method3GetField = CpUtils.getInstructions(GetFieldInstruction.class, method3);
+        assertTrue("Expected 2 getfield instruction in method3, found " + method3GetField.size(), method3GetField.size() == 2);
+
+    }
+
+    public void compileBasicSetters(OllirResult ollirResult) {
+
+        ClassUnit classUnit = ollirResult.getOllirClass();
+
+        // Test name of the class and super
+        assertEquals("Class name not what was expected", "CompileBasic", classUnit.getClassName());
+        assertEquals("Super class name not what was expected", "Quicksort", classUnit.getSuperClass());
+
+        // Test fields
+        assertEquals("Class should have two fields", 2, classUnit.getNumFields());
+        var fieldNames = new HashSet<>(Arrays.asList("intField", "boolField"));
+        assertThat(fieldNames, hasItem(classUnit.getField(0).getFieldName()));
+        assertThat(fieldNames, hasItem(classUnit.getField(1).getFieldName()));
+
+        // Test method 3
+        var method3 = CpUtils.getMethod(ollirResult, "method3");
+        assertNotNull("Could not find method3'", method3);
+
+        var method3PutField = CpUtils.getInstructions(PutFieldInstruction.class, method3);
+        assertTrue("Expected 1 putfield instruction in method3, found " + method3PutField.size(), method3PutField.size() == 1);
+
+    }
+
     public void compileArithmetic(ClassUnit classUnit) {
         // Test name of the class
         assertEquals("Class name not what was expected", "CompileArithmetic", classUnit.getClassName());
@@ -184,6 +230,22 @@ public class OllirTest {
         System.out.println(result.getOllirCode());
 
         compileBasicWithFields(result);
+    }
+
+    @Test
+    public void basicGetters() {
+        var result = getOllirResult("basic/Getters.jmm");
+        System.out.println(result.getOllirCode());
+
+        compileBasicGetters(result);
+    }
+
+    @Test
+    public void basicSetters() {
+        var result = getOllirResult("basic/Setter.jmm");
+        System.out.println(result.getOllirCode());
+
+        compileBasicSetters(result);
     }
 
     @Test
