@@ -156,6 +156,13 @@ public class SemanticAnalysisTest {
     }
 
     @Test
+    public void callToMethodFromBaseClass() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/CallToMethodFromBaseClass.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
     public void incompatibleArguments() {
         var result = TestUtils
                 .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/IncompatibleArguments.jmm"));

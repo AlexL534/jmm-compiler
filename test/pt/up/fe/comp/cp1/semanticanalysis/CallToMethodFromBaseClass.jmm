@@ -1,0 +1,12 @@
+ import B;
+ class A{
+    public static void main(String[] args) {
+
+     }
+      int f() {
+          B b;
+          b = new B();
+          b.f();
+          return 1;
+      }
+  }

@@ -9,6 +9,7 @@ class CallToUndeclaredMethod {
         a = new CallToUndeclaredMethod();
 
         a.bar();
+        this.bar();
 
         return 0;
     }
