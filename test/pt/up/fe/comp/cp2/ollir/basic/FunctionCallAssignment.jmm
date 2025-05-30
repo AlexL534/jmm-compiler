@@ -1,0 +1,16 @@
+class FunctionCallAssignment {
+    public int calculate() {
+        int value;
+        value = 42;
+        return value;
+    }
+
+    public static void main(String[] args) {
+    }
+
+    public int testFunctionCall() {
+        int result;
+        result = this.calculate();
+        return result;
+    }
+}

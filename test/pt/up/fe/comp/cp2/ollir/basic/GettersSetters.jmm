@@ -1,0 +1,30 @@
+class GettersSetters {
+    int value;
+
+    public static void main(String[] args) {
+        // Empty main for compilation
+    }
+
+    // Setter method
+    public void setValue(int newValue) {
+        this.value = newValue;
+    }
+
+    // Getter method
+    public int getValue() {
+        return this.value;
+    }
+
+    // Test getter functionality
+    public int testGetValue() {
+        int x;
+        x = this.getValue();
+        return x;
+    }
+
+    // Test setter functionality
+    public int testSetValue() {
+        this.setValue(5);
+        return this.getValue();
+    }
+}

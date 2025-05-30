@@ -1,14 +1,11 @@
 package pt.up.fe.comp2025.optimization;
 
-import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.ast.PreorderJmmVisitor;
 import pt.up.fe.comp2025.ast.Kind;
 import pt.up.fe.comp2025.ast.TypeUtils;
-
-import java.util.List;
 
 import static pt.up.fe.comp2025.ast.Kind.*;
 
@@ -158,7 +155,6 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
     }
 
     private OllirExprResult visitMethodCall(JmmNode node, Void unused) {
-        //method call used when it is used inside expressions (some code is the same as in the normal ollir generator visitor)
         String funcType = ".i32";
         String tempVar = ollirTypes.nextTemp() + funcType;
         types.setCurrentMethod(currentMethod);
@@ -166,65 +162,44 @@ public class OllirExprGeneratorVisitor extends PreorderJmmVisitor<Void, OllirExp
         String methodName = node.get("name");
         var firstChildType = types.getExprType(node.getChild(0)).getName();
         StringBuilder methodCall = new StringBuilder();
-        if(firstChildType.equals(table.getClassName()) && node.getChild(0).getKind().equals(THIS_EXPR.getNodeName())) {
+        StringBuilder computation = new StringBuilder();
+
+        if (firstChildType.equals(table.getClassName()) && node.getChild(0).getKind().equals(THIS_EXPR.getNodeName())) {
             methodCall.append("invokevirtual(this.").append(table.getClassName()).append(", \"").append(methodName).append("\"");
-        }
-        else{
+        } else {
             String methodObject = table.getClassName();
-            for(var imp : table.getImports()){
-                if(imp.equals(node.getChild(0).get("name")) || firstChildType.equals(imp)){
+            for (var imp : table.getImports()) {
+                if (imp.equals(node.getChild(0).get("name")) || firstChildType.equals(imp)) {
                     methodObject = imp;
                 }
             }
-            //for objects from the imports
-            if(node.getChild(0).getKind().equals(VAR_REF_EXPR.getNodeName()) && !firstChildType.equals("unknown")){
+            if (node.getChild(0).getKind().equals(VAR_REF_EXPR.getNodeName()) && !firstChildType.equals("unknown")) {
                 methodCall.append("invokevirtual(").append(node.getChild(0).get("name")).append(".").append(methodObject).append(", \"").append(methodName).append("\"");
-            }
-            else {
+            } else {
                 methodCall.append("invokestatic(").append(methodObject).append(", \"").append(methodName).append("\"");
             }
         }
-        StringBuilder args = new StringBuilder();
-        for (int i = 1; i < node.getChildren().size(); i++ ) {
-            if(i == 1){
-                methodCall.append(", ");
-            }
-            JmmNode child = node.getChildren().get(i);
-            Type nodeType = types.getExprType(child);
-            String ollirType = ollirTypes.toOllirType(nodeType);
-            var kind = child.getKind();
 
-            if (Kind.fromString(kind).equals(VAR_REF_EXPR) || Kind.fromString(kind).equals(INTEGER_LITERAL) || Kind.fromString(kind).equals(BOOLEAN_LITERAL)) {
-                var result = visit(child);
-                args.append(result.getCode());
-            }
-            else if (Kind.fromString(kind).equals(VAR_REF_EXPR)) {
-                var result = visit(child);
-                args.append(result.getCode());
-            }
-            else{
-                //in this case, we need to visit the node that wil create a temporary variable and then insert that temporary variable into the method call
-                var result = visit(child);
-                methodCall = new StringBuilder(result.getComputation() + methodCall);
+        for (int i = 1; i < node.getChildren().size(); i++) {
+            JmmNode child = node.getChildren().get(i);
+            var result = visit(child);
+
+            methodCall.append(", ");
+
+            if (Kind.fromString(child.getKind()).equals(VAR_REF_EXPR) ||
+                    Kind.fromString(child.getKind()).equals(INTEGER_LITERAL) ||
+                    Kind.fromString(child.getKind()).equals(BOOLEAN_LITERAL)) {
+                methodCall.append(result.getCode());
+            } else {
+                computation.append(result.getComputation());
                 methodCall.append(result.getCode());
             }
-
-            args.append(ollirType);
-            if(i < node.getChildren().size() - 2) {
-                args.append(", ");
-            }
         }
-        methodCall.append(args);
-        methodCall.append(")");
-        String returnType = ".V";
-        if(firstChildType.equals(table.getClassName())) {
-            returnType = ollirTypes.toOllirType(table.getReturnType(methodName));
-        }
-        methodCall.append(returnType);
 
-
-        //create the computation
-        StringBuilder computation = new StringBuilder();
+        String returnType = firstChildType.equals(table.getClassName())
+                ? ollirTypes.toOllirType(table.getReturnType(methodName))
+                : ".V";
+        methodCall.append(")").append(returnType);
 
         computation.append(tempVar).append(SPACE)
                 .append(ASSIGN).append(funcType).append(SPACE)

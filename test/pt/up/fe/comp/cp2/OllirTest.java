@@ -14,6 +14,8 @@ import pt.up.fe.specs.util.SpecsIo;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.hamcrest.CoreMatchers.hasItem;
@@ -342,4 +344,62 @@ public class OllirTest {
         CpUtils.assertEquals("Number of array reads", 6, numArrayReads, result);
     }
 
+    @Test
+    public void functionCallAssignment() {
+        var result = getOllirResult("basic/FunctionCallAssignment.jmm");
+        var ollirCode = result.getOllirCode();
+
+        assertTrue("Should have calculate method",
+                ollirCode.contains(".method public calculate().i32"));
+        assertTrue("Should have testFunctionCall method",
+                ollirCode.contains(".method public testFunctionCall().i32"));
+
+        String testMethodCode = ollirCode.split("testFunctionCall\\(\\)\\.i32 \\{")[1]
+                .split("\\}")[0];
+
+        assertTrue("Should call calculate method",
+                testMethodCode.contains("invokevirtual(this.FunctionCallAssignment, \"calculate\")"));
+        assertTrue("Should assign to result",
+                testMethodCode.contains("result.i32 :="));
+
+        assertFalse("Should not pass any arguments to calculate",
+                testMethodCode.contains("invokevirtual.*,"));
+    }
+
+    @Test
+    public void functionCallWithComplexArguments() {
+        var result = getOllirResult("basic/ComplexArguments.jmm");
+        var ollirCode = result.getOllirCode();
+
+        assertTrue("Should have process method",
+                ollirCode.contains(".method public process(") &&
+                        ollirCode.contains(".i32,") &&
+                        ollirCode.contains(".i32).i32"));
+        assertTrue("Should have testComplexArguments method",
+                ollirCode.contains(".method public testComplexArguments().i32"));
+
+        String testMethodCode = ollirCode.split("testComplexArguments\\(\\)\\.i32 \\{")[1]
+                .split("\\}")[0];
+
+        assertTrue("Should calculate sum (a + b)",
+                testMethodCode.contains("+.i32"));
+        assertTrue("Should calculate product (a * b)",
+                testMethodCode.contains("*.i32"));
+        assertTrue("Should calculate doubleSum (sum * 2)",
+                testMethodCode.contains("*.i32"));
+
+        assertTrue("Should call process method",
+                testMethodCode.contains("invokevirtual(this.ComplexArguments, \"process\""));
+        assertTrue("Should pass sum as first argument",
+                testMethodCode.contains("sum.i32,"));
+        assertTrue("Should pass product as second argument",
+                testMethodCode.contains("product.i32,"));
+        assertTrue("Should pass doubleSum as third argument",
+                testMethodCode.contains("doubleSum.i32"));
+
+        assertTrue("Should assign to result",
+                testMethodCode.contains("result.i32 :="));
+        assertTrue("Should return result",
+                testMethodCode.contains("ret.i32 result.i32"));
+    }
 }
