@@ -249,6 +249,17 @@ public class OllirTest {
     }
 
     @Test
+    public void basicComplexImports() {
+        var result = getOllirResult("basic/BasicComplexImports.jmm");
+        System.out.println(result.getOllirCode());
+        var method = CpUtils.getMethod(result, "main");
+
+
+        var instructions = CpUtils.getInstructions(AssignInstruction.class, method);
+        CpUtils.assertTrue("Expected 1 assignment, found " + instructions.size(), instructions.size() == 1, result);
+    }
+
+    @Test
     public void basicAssignment() {
         var result = getOllirResult("basic/BasicAssignment.jmm");
 
@@ -338,6 +349,18 @@ public class OllirTest {
         var branches = CpUtils.assertInstExists(CondBranchInstruction.class, method, result);
 
         CpUtils.assertTrue("Number of branches between 1 and 2", branches.size() > 0 && branches.size() < 3, result);
+    }
+
+    @Test
+    public void conditionInMethodCall() {
+
+        var result = getOllirResult("control_flow/ConditionInMethodCall.jmm");
+
+        var method = CpUtils.getMethod(result, "func");
+
+        var bin = CpUtils.getInstructions(BinaryOpInstruction.class, method);
+
+        CpUtils.assertTrue("Number of binary operations should be 2. Given " + bin.toString(), bin.size() == 2, result);
     }
 
 

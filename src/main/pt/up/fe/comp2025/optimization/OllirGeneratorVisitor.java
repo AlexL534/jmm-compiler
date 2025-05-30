@@ -100,8 +100,14 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         importStmt.append("import ");
 
         for(var importValue: table.getImports()) {
-            if(importValue.contains(node.get("ID"))){
-                importStmt.append(node.get("ID"));
+            var cleanImp = importValue.replaceAll("\\s+", "");
+            String value = node.get("value");
+            value = value.replaceAll("\\s+", "");
+            value = value.replaceAll(",", ".");
+            value = value.replaceAll("\\[", "");
+            value = value.replaceAll("\\]", "");
+            if(cleanImp.equals(value)){
+                importStmt.append(cleanImp);
             }
         }
 
