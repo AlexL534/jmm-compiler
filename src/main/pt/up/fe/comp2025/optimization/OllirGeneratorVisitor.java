@@ -458,10 +458,10 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
                 //in this case, we need to visit the node that wil create a temporary variable and then insert that temporary variable into the method call
                 var result = exprVisitor.visit(child);
                 methodCall = new StringBuilder(result.getComputation() + methodCall);
-                methodCall.append(result.getCode());
+                args.append(result.getCode());
             }
 
-            if(i <= node.getChildren().size() - 2) {
+            if(i < node.getChildren().size() - 1) {
                 args.append(", ");
             }
         }

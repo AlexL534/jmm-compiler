@@ -236,7 +236,7 @@ public class OllirTest {
         assertTrue("Could not find a call instruction in method " + methodName, callInst.isPresent());
 
         var insts = CpUtils.getInstructions(InvokeVirtualInstruction.class, methodFoo);
-        assertEquals("Expected 3 invokevirtual instruction in main, found " + insts.size(), 3, insts.size());
+        assertEquals("Expected 5 invokevirtual instruction in main, found " + insts.size(), 5, insts.size());
         var insts2 = CpUtils.getInstructions(InvokeStaticInstruction.class, methodFoo);
         assertEquals("Expected 1 invokestatic instruction in main, found " + insts2.size(), 1, insts2.size());
     }

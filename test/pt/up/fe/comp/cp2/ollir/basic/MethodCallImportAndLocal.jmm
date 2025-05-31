@@ -4,10 +4,11 @@ class CompileBasic extends Quicksort {
     public int foo(int a){
         CompileBasic b;
         Quicksort c;
-        c.foo(a);
-        Quicksort.foo(a);
+        int d;
+        d = c.foo(b.foo(1+1), a + 1, 10);
+        Quicksort.foo(a + 10, a+9-1, a < 0);
         this.foo(a);
-        b.foo(a);
+        b.foo(b.foo(1+1));
 
         return 1;
     }
