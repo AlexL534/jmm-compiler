@@ -1,0 +1,11 @@
+import teste.aos.imports;
+import Quicksort;
+import teste.aos;
+
+class CompileBasic extends Quicksort {
+    public static void main(String[] args) {
+        imports teste;
+        imports t;
+        teste = t;
+    }
+}

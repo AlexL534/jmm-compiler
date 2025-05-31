@@ -1,0 +1,13 @@
+import Quicksort;
+
+class CompileBasic extends Quicksort {
+    public static void main(String[] args) {
+       Quicksort a;
+        int b;
+        b = 2;
+        a.test(1, b);
+        a.test(b);
+        Quicksort.test(2,3);
+
+    }
+}

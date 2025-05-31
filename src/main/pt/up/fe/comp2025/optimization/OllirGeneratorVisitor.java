@@ -100,8 +100,14 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         importStmt.append("import ");
 
         for(var importValue: table.getImports()) {
-            if(importValue.contains(node.get("ID"))){
-                importStmt.append(node.get("ID"));
+            var cleanImp = importValue.replaceAll("\\s+", "");
+            String value = node.get("value");
+            value = value.replaceAll("\\s+", "");
+            value = value.replaceAll(",", ".");
+            value = value.replaceAll("\\[", "");
+            value = value.replaceAll("\\]", "");
+            if(cleanImp.equals(value)){
+                importStmt.append(cleanImp);
             }
         }
 
@@ -163,28 +169,32 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         }
 
         //inline binary expression (does not need a temp variable)
-        if(node.getChild(0).getKind().equals(BINARY_EXPR.getNodeName())){
+        String varName = node.get("varName");
+        if(node.getChild(0).getKind().equals(BINARY_EXPR.getNodeName()) && !isClassField(varName)){
             var binExpr = node.getChild(0);
-            var rExpr = binExpr.getChild(0);
-            var lExpr = binExpr.getChild(1);
+            var lExpr = binExpr.getChild(0);
+            var rExpr = binExpr.getChild(1);
 
             if((rExpr.getKind().equals(INTEGER_LITERAL.getNodeName()) || rExpr.getKind().equals(VAR_REF_EXPR.getNodeName()))
                 && (lExpr.getKind().equals(INTEGER_LITERAL.getNodeName()) || lExpr.getKind().equals(VAR_REF_EXPR.getNodeName()))
             ){
                 Type thisType = types.getExprType(node);
                 String typeString = ollirTypes.toOllirType(thisType);
-                String varName = node.get("varName");
                 var varCode = varName + typeString;
+                var lhs = exprVisitor.visit(lExpr);
+                rhs = exprVisitor.visit(rExpr);
+                code.append(lhs.getComputation());
+                code.append(rhs.getComputation());
                 code.append(varCode);
                 code.append(SPACE);
                 code.append(ASSIGN);
                 code.append(typeString);
                 code.append(SPACE);
-                code.append(exprVisitor.visit(rExpr).getCode());
+                code.append(lhs.getCode());
                 code.append(binExpr.get("op"));
                 code.append(typeString);
                 code.append(SPACE);
-                code.append(exprVisitor.visit(lExpr).getCode());
+                code.append(rhs.getCode());
                 code.append(END_STMT);
 
                 return code.toString();
@@ -197,7 +207,6 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
         // code to compute self
         // statement has type of lhs
         // Check if it's a field assignment
-        String varName = node.get("varName");
         if (isClassField(varName)) {
             Type fieldType = types.getExprType(node.getChild(0));
             String ollirType = ollirTypes.toOllirType(fieldType);
@@ -449,10 +458,10 @@ public class OllirGeneratorVisitor extends AJmmVisitor<Void, String> {
                 //in this case, we need to visit the node that wil create a temporary variable and then insert that temporary variable into the method call
                 var result = exprVisitor.visit(child);
                 methodCall = new StringBuilder(result.getComputation() + methodCall);
-                methodCall.append(result.getCode());
+                args.append(result.getCode());
             }
 
-            if(i <= node.getChildren().size() - 2) {
+            if(i < node.getChildren().size() - 1) {
                 args.append(", ");
             }
         }

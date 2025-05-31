@@ -60,7 +60,14 @@ public class TypeUtils {
         else{
             var imports = table.getImports();
 
-            return name.equals("int") || imports.contains(name) ||
+            for(var imp : imports){
+                var imps = imp.split("\\.");
+                if(imps[imps.length - 1].strip().equals(name)) {
+                    return true;
+                }
+            }
+
+            return name.equals("int") ||
                     name.equals("boolean") || name.equals("String") ||
                     name.equals(table.getClassName()) || name.equals(table.getSuper());
         }

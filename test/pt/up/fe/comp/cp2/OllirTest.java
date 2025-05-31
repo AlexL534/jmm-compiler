@@ -100,6 +100,52 @@ public class OllirTest {
         assertTrue("Expected 1 putfield instruction in method3, found " + method3PutField.size(), method3PutField.size() == 1);
     }
 
+    public void compileBasicGetters(OllirResult ollirResult) {
+
+        ClassUnit classUnit = ollirResult.getOllirClass();
+
+        // Test name of the class and super
+        assertEquals("Class name not what was expected", "CompileBasic", classUnit.getClassName());
+        assertEquals("Super class name not what was expected", "Quicksort", classUnit.getSuperClass());
+
+        // Test fields
+        assertEquals("Class should have two fields", 2, classUnit.getNumFields());
+        var fieldNames = new HashSet<>(Arrays.asList("intField", "boolField"));
+        assertThat(fieldNames, hasItem(classUnit.getField(0).getFieldName()));
+        assertThat(fieldNames, hasItem(classUnit.getField(1).getFieldName()));
+
+        // Test method 3
+        var method3 = CpUtils.getMethod(ollirResult, "method3");
+        assertNotNull("Could not find method3'", method3);
+
+        var method3GetField = CpUtils.getInstructions(GetFieldInstruction.class, method3);
+        assertTrue("Expected 2 getfield instruction in method3, found " + method3GetField.size(), method3GetField.size() == 2);
+
+    }
+
+    public void compileBasicSetters(OllirResult ollirResult) {
+
+        ClassUnit classUnit = ollirResult.getOllirClass();
+
+        // Test name of the class and super
+        assertEquals("Class name not what was expected", "CompileBasic", classUnit.getClassName());
+        assertEquals("Super class name not what was expected", "Quicksort", classUnit.getSuperClass());
+
+        // Test fields
+        assertEquals("Class should have two fields", 2, classUnit.getNumFields());
+        var fieldNames = new HashSet<>(Arrays.asList("intField", "boolField"));
+        assertThat(fieldNames, hasItem(classUnit.getField(0).getFieldName()));
+        assertThat(fieldNames, hasItem(classUnit.getField(1).getFieldName()));
+
+        // Test method 3
+        var method3 = CpUtils.getMethod(ollirResult, "method3");
+        assertNotNull("Could not find method3'", method3);
+
+        var method3PutField = CpUtils.getInstructions(PutFieldInstruction.class, method3);
+        assertTrue("Expected 1 putfield instruction in method3, found " + method3PutField.size(), method3PutField.size() == 1);
+
+    }
+
     public void compileArithmetic(ClassUnit classUnit) {
         // Test name of the class
         assertEquals("Class name not what was expected", "CompileArithmetic", classUnit.getClassName());
@@ -150,6 +196,53 @@ public class OllirTest {
                 callInst.get().getClass());
     }
 
+    public void compileMethodImportInvocation(ClassUnit classUnit) {
+        // Test foo
+        var methodName = "main";
+        Method methodFoo = classUnit.getMethods().stream()
+                .filter(method -> method.getMethodName().equals(methodName))
+                .findFirst()
+                .orElse(null);
+
+        assertNotNull("Could not find method " + methodName, methodFoo);
+
+        var callInst = methodFoo.getInstructions().stream()
+                .filter(inst -> inst instanceof CallInstruction)
+                .map(CallInstruction.class::cast)
+                .findFirst();
+        assertTrue("Could not find a call instruction in method " + methodName, callInst.isPresent());
+
+        assertEquals("Invocation type not what was expected", InvokeVirtualInstruction.class,
+                callInst.get().getClass());
+
+        var insts = CpUtils.getInstructions(InvokeVirtualInstruction.class, methodFoo);
+        assertEquals("Expected 2 invokevirtual instruction in main, found " + insts.size(), 2, insts.size());
+        var insts2 = CpUtils.getInstructions(InvokeStaticInstruction.class, methodFoo);
+        assertEquals("Expected 1 invokestatic instruction in main, found " + insts2.size(), 1, insts2.size());
+    }
+
+    public void compileMethodImportAndLocalInvocation(ClassUnit classUnit) {
+        // Test foo
+        var methodName = "foo";
+        Method methodFoo = classUnit.getMethods().stream()
+                .filter(method -> method.getMethodName().equals(methodName))
+                .findFirst()
+                .orElse(null);
+
+        assertNotNull("Could not find method " + methodName, methodFoo);
+
+        var callInst = methodFoo.getInstructions().stream()
+                .filter(inst -> inst instanceof CallInstruction)
+                .map(CallInstruction.class::cast)
+                .findFirst();
+        assertTrue("Could not find a call instruction in method " + methodName, callInst.isPresent());
+
+        var insts = CpUtils.getInstructions(InvokeVirtualInstruction.class, methodFoo);
+        assertEquals("Expected 5 invokevirtual instruction in main, found " + insts.size(), 5, insts.size());
+        var insts2 = CpUtils.getInstructions(InvokeStaticInstruction.class, methodFoo);
+        assertEquals("Expected 1 invokestatic instruction in main, found " + insts2.size(), 1, insts2.size());
+    }
+
     public void compileAssignment(ClassUnit classUnit) {
         // Test name of the class
         assertEquals("Class name not what was expected", "CompileAssignment", classUnit.getClassName());
@@ -189,6 +282,33 @@ public class OllirTest {
     }
 
     @Test
+    public void basicGetters() {
+        var result = getOllirResult("basic/Getters.jmm");
+        System.out.println(result.getOllirCode());
+
+        compileBasicGetters(result);
+    }
+
+    @Test
+    public void basicSetters() {
+        var result = getOllirResult("basic/Setter.jmm");
+        System.out.println(result.getOllirCode());
+
+        compileBasicSetters(result);
+    }
+
+    @Test
+    public void basicComplexImports() {
+        var result = getOllirResult("basic/BasicComplexImports.jmm");
+        System.out.println(result.getOllirCode());
+        var method = CpUtils.getMethod(result, "main");
+
+
+        var instructions = CpUtils.getInstructions(AssignInstruction.class, method);
+        CpUtils.assertTrue("Expected 1 assignment, found " + instructions.size(), instructions.size() == 1, result);
+    }
+
+    @Test
     public void basicAssignment() {
         var result = getOllirResult("basic/BasicAssignment.jmm");
 
@@ -200,6 +320,19 @@ public class OllirTest {
         var result = getOllirResult("basic/BasicMethodInvocation.jmm");
 
         compileMethodInvocation(result.getOllirClass());
+    }
+
+    @Test
+    public void basicMethodInvocationFromImport() {
+        var result = getOllirResult("basic/MethodCallImport.jmm");
+
+        compileMethodImportInvocation(result.getOllirClass());
+    }
+    @Test
+    public void basicMethodInvocationFromImportAndLocal() {
+        var result = getOllirResult("basic/MethodCallImportAndLocal.jmm");
+
+        compileMethodImportAndLocalInvocation(result.getOllirClass());
     }
 
 
@@ -278,6 +411,18 @@ public class OllirTest {
         var branches = CpUtils.assertInstExists(CondBranchInstruction.class, method, result);
 
         CpUtils.assertTrue("Number of branches between 1 and 2", branches.size() > 0 && branches.size() < 3, result);
+    }
+
+    @Test
+    public void conditionInMethodCall() {
+
+        var result = getOllirResult("control_flow/ConditionInMethodCall.jmm");
+
+        var method = CpUtils.getMethod(result, "func");
+
+        var bin = CpUtils.getInstructions(BinaryOpInstruction.class, method);
+
+        CpUtils.assertTrue("Number of binary operations should be 2. Given " + bin.toString(), bin.size() == 2, result);
     }
 
 

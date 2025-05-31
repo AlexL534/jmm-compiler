@@ -1,0 +1,17 @@
+class CallMethod {
+
+
+    public static void main(String[] args) {
+
+    }
+
+    public int foo(){
+        return 1;
+    }
+
+    public int foo2(){
+        CallMethod a;
+        a.foo();
+        return 1;
+    }
+}

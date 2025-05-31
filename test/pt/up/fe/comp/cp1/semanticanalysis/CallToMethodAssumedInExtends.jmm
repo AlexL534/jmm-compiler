@@ -13,6 +13,7 @@ class CallToMethodAssumedInExtends extends A {
         // Assume bar() is in A
         a.bar();
 
+
         return 0;
     }
 }

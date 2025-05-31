@@ -127,18 +127,14 @@ public class ArrayOperationCheck extends AnalysisVisitor {
     private Void visitAssignment(JmmNode node, SymbolTable table) {
         TypeUtils utils = new TypeUtils(table);
         utils.setCurrentMethod(currentMethod);
-        
-        // Check if we have enough children for an assignment
-        if (node.getNumChildren() < 2) {
-            return null;
-        }
+
         
         JmmNode leftNode = node.getChildren().get(0);
-        JmmNode rightNode = node.getChildren().get(1);
-        
+
         // Case 1: Array assignment statement (ARRAY_ASSIGN_STMT)
         // Direct assignment to array element: array[index] = value
         if (node.getKind().equals(ARRAY_ASSIGN_STMT.getNodeName())) {
+            JmmNode rightNode = node.getChildren().get(1);
             Type valueType = utils.getExprType(rightNode);
             
             if (valueType != null && !valueType.getName().equals("int")) {
@@ -161,9 +157,26 @@ public class ArrayOperationCheck extends AnalysisVisitor {
         // Case 2: Regular assignment with array access on the left (ASSIGN_STMT)
         // General assignment where left side might be an array access
         if (leftNode.getKind().equals(ARRAY_SUBSCRIPT.getNodeName())) {
+            JmmNode rightNode = leftNode.getChildren().get(1);
             // Get the array type
             JmmNode arrayExpr = leftNode.getChildren().getFirst();
             Type arrayType = utils.getExprType(arrayExpr);
+
+            //check if array type is valid
+            if(!arrayType.isArray()){
+                String message = String.format("Cannot assign %s to not array elements",
+                        arrayType.getName());
+
+                Report report = Report.newError(
+                        Stage.SEMANTIC,
+                        rightNode.getLine(),
+                        rightNode.getColumn(),
+                        message,
+                        null
+                );
+
+                addReport(report);
+            }
             
             // Get the expression type
             Type valueType = utils.getExprType(rightNode);
@@ -184,6 +197,25 @@ public class ArrayOperationCheck extends AnalysisVisitor {
                     null
                 );
                 
+                addReport(report);
+            }
+        }
+
+        if(leftNode.getKind().equals(ARRAY_CREATION.getNodeName())){
+            var indexExpr = leftNode.getChildren().getFirst();
+            Type valueType = utils.getExprType(indexExpr);
+            if (valueType != null && !valueType.getName().equals("int")) {
+                String message = String.format("Cannot use %s to declare array size",
+                        valueType.getName());
+
+                Report report = Report.newError(
+                        Stage.SEMANTIC,
+                        node.getLine(),
+                        node.getColumn(),
+                        message,
+                        null
+                );
+
                 addReport(report);
             }
         }

@@ -50,6 +50,13 @@ public class SemanticAnalysisTest {
     }
 
     @Test
+    public void callMethodFromClass() {
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/CallMethodFromClass.jmm"));
+
+        TestUtils.noErrors(result);
+    }
+
+    @Test
     public void intPlusObject() {
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/IntPlusObject.jmm"));
         TestUtils.mustFail(result);
@@ -142,6 +149,20 @@ public class SemanticAnalysisTest {
     }
 
     @Test
+    public void callToMethodFromMain() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/CallMethodFromMain.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void callToMethodFromBaseClass() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/CallToMethodFromBaseClass.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
     public void incompatibleArguments() {
         var result = TestUtils
                 .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/IncompatibleArguments.jmm"));
@@ -175,6 +196,13 @@ public class SemanticAnalysisTest {
     public void varargsWrong() {
         var result = TestUtils
                 .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/VarargsWrong.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+    @Test
+    public void varargsSymbolInFunc() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/VarargsSymbolInFunc.jmm"));
         TestUtils.mustFail(result);
         System.out.println(result.getReports());
     }
@@ -225,6 +253,14 @@ public class SemanticAnalysisTest {
         TestUtils.noErrors(result);
         System.out.println(result.getReports());
     }
+    @Test
+    public void thisAccessField() {
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ThisAccessField.jmm"));
+        TestUtils.noErrors(result);
+        System.out.println(result.getReports());
+    }
+
 
     @Test
     public void returnTypeCannotBeVarargs() {
@@ -384,6 +420,13 @@ public class SemanticAnalysisTest {
     @Test
     public void invalidIntArrayTest() {
         var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/InvalidIntArrayTest.jmm"));
+        TestUtils.mustFail(result);
+        System.out.println(result.getReports());
+    }
+
+    @Test
+    public void invalidArrayAccessTest() {
+        var result = TestUtils.analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/InvalidArrayAccess.jmm"));
         TestUtils.mustFail(result);
         System.out.println(result.getReports());
     }
