@@ -219,6 +219,28 @@ public class OllirTest {
         assertEquals("Expected 1 invokestatic instruction in main, found " + insts2.size(), 1, insts2.size());
     }
 
+    public void compileMethodImportAndLocalInvocation(ClassUnit classUnit) {
+        // Test foo
+        var methodName = "foo";
+        Method methodFoo = classUnit.getMethods().stream()
+                .filter(method -> method.getMethodName().equals(methodName))
+                .findFirst()
+                .orElse(null);
+
+        assertNotNull("Could not find method " + methodName, methodFoo);
+
+        var callInst = methodFoo.getInstructions().stream()
+                .filter(inst -> inst instanceof CallInstruction)
+                .map(CallInstruction.class::cast)
+                .findFirst();
+        assertTrue("Could not find a call instruction in method " + methodName, callInst.isPresent());
+
+        var insts = CpUtils.getInstructions(InvokeVirtualInstruction.class, methodFoo);
+        assertEquals("Expected 3 invokevirtual instruction in main, found " + insts.size(), 3, insts.size());
+        var insts2 = CpUtils.getInstructions(InvokeStaticInstruction.class, methodFoo);
+        assertEquals("Expected 1 invokestatic instruction in main, found " + insts2.size(), 1, insts2.size());
+    }
+
     public void compileAssignment(ClassUnit classUnit) {
         // Test name of the class
         assertEquals("Class name not what was expected", "CompileAssignment", classUnit.getClassName());
@@ -303,6 +325,12 @@ public class OllirTest {
         var result = getOllirResult("basic/MethodCallImport.jmm");
 
         compileMethodImportInvocation(result.getOllirClass());
+    }
+    @Test
+    public void basicMethodInvocationFromImportAndLocal() {
+        var result = getOllirResult("basic/MethodCallImportAndLocal.jmm");
+
+        compileMethodImportAndLocalInvocation(result.getOllirClass());
     }
 
 

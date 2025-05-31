@@ -1,0 +1,17 @@
+import Quicksort;
+
+class CompileBasic extends Quicksort {
+    public int foo(int a){
+        CompileBasic b;
+        Quicksort c;
+        c.foo(a);
+        Quicksort.foo(a);
+        this.foo(a);
+        b.foo(a);
+
+        return 1;
+    }
+    public static void main(String[] args) {
+
+    }
+}
