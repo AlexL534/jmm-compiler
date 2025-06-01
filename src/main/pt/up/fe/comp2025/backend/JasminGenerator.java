@@ -936,8 +936,16 @@ public class JasminGenerator {
             OperationType opType = operation.getOpType();
             Element leftOperand = binaryOp.getOperands().get(0);
             Element rightOperand = binaryOp.getOperands().get(1);
+
+            // Special case for 0 < a (which is a > 0)
+            if (leftOperand instanceof LiteralElement && ((LiteralElement)leftOperand).getLiteral().equals("0") &&
+                    opType == OperationType.LTH) {
+                code.append(apply(rightOperand));
+                code.append("ifgt ").append(label).append(NL);
+                return code.toString();
+            }
             
-            // For comparisons with zero, optimize the branch instruction
+            // For comparisons with zero on the right (a < 0), optimize the branch instruction
             if (isComparisonWithZero(opType, rightOperand) && rightOperand instanceof LiteralElement) {
                 code.append(apply(leftOperand));
                 
