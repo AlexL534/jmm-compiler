@@ -136,29 +136,29 @@ public class TypeUtils {
             type = table.getReturnType(expr.get("name")).getName();
             isArray = table.getReturnType(expr.get("name")).isArray();
         }
-            else if(Kind.FIELD_ACCESS.check(expr)){
+        else if(Kind.FIELD_ACCESS.check(expr)){
             type = "int";
             isArray = false;
         }
-            else if(Kind.ARRAY_CREATION.check(expr)){
+        else if(Kind.ARRAY_CREATION.check(expr)){
             type = "int";
             isArray = true;
         }
-            else if(Kind.ARRAY_SUBSCRIPT.check(expr)){
+        else if(Kind.ARRAY_SUBSCRIPT.check(expr)){
             type = "int";
             isArray = false;
         }
-            else if(Kind.ARRAY_LITERAL.check(expr)){
+        else if(Kind.ARRAY_LITERAL.check(expr)){
             type = "int";
             isArray = true;
         }
-            else if(Kind.OBJECT_CREATION.check(expr)){
-                type = expr.get("name");
-                isArray = false;
+        else if(Kind.OBJECT_CREATION.check(expr)){
+            type = expr.get("name");
+            isArray = false;
         }
-            else if(Kind.THIS_EXPR.check(expr)){
-                type = table.getClassName();
-                isArray = false;
+        else if(Kind.THIS_EXPR.check(expr)){
+            type = table.getClassName();
+            isArray = false;
         }
         // Handle binary expressions like comparisons
         else if (BINARY_EXPR.check(expr)) {
@@ -170,7 +170,7 @@ public class TypeUtils {
                 return new Type("int", false);  // Arithmetic operations
             }
         }
-            else{
+        else{
             return this.getExprType(expr.getChild(0));
         }
 
@@ -178,9 +178,4 @@ public class TypeUtils {
 
         return new Type(type, isArray);
     }
-
-
-
-
-
 }

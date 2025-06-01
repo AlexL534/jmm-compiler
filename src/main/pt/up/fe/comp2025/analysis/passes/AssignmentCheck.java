@@ -18,6 +18,7 @@ public class AssignmentCheck extends AnalysisVisitor {
     public void buildVisitor() {
         addVisit(Kind.METHOD_DECL, this::visitMethodDecl);
         addVisit(Kind.ASSIGN_STMT, this::visitAssign);
+        addVisit(Kind.FIELD_ACCESS, this::visitFieldAccess);
     }
 
     private Void visitMethodDecl(JmmNode method, SymbolTable table) {
@@ -121,6 +122,23 @@ public class AssignmentCheck extends AnalysisVisitor {
 
         return null;
     }
+
+    private Void visitFieldAccess(JmmNode fieldAccess, SymbolTable table) {
+        // Check if this is a field access using 'this'
+        if (fieldAccess.getChild(0).getKind().equals("ThisExpr")) {
+            Report report = Report.newError(
+                    Stage.SEMANTIC,
+                    fieldAccess.getLine(),
+                    fieldAccess.getColumn(),
+                    "Invalid field access: cannot access fields using 'this'",
+                    null
+            );
+            addReport(report);
+        }
+        return null;
+    }
+
+
 
 
 }

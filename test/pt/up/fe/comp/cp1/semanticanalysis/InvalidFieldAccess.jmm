@@ -1,0 +1,8 @@
+class InvalidFieldAccess {
+    int a;
+    int f() {
+        int b;
+        b=this.a;
+        return 1;
+    }
+}

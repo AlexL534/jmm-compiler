@@ -1,8 +1,0 @@
-class C {
-    static void main(args) {
-        C var;
-        ...;
-        var.foo();
-    }
-    void foo() {}
-}

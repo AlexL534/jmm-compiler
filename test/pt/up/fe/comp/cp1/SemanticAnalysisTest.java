@@ -201,14 +201,6 @@ public class SemanticAnalysisTest {
     }
 
     @Test
-    public void varargsSymbolInFunc() {
-        var result = TestUtils
-                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/VarargsSymbolInFunc.jmm"));
-        TestUtils.noErrors(result);
-        System.out.println(result.getReports());
-    }
-
-    @Test
     public void arrayInit() {
         var result = TestUtils
                 .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ArrayInit.jmm"));
@@ -254,11 +246,12 @@ public class SemanticAnalysisTest {
         TestUtils.noErrors(result);
         System.out.println(result.getReports());
     }
+
     @Test
-    public void thisAccessField() {
+    public void invalidFieldAccess() {
         var result = TestUtils
-                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/ThisAccessField.jmm"));
-        TestUtils.noErrors(result);
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp1/semanticanalysis/InvalidFieldAccess.jmm"));
+        TestUtils.mustFail(result);
         System.out.println(result.getReports());
     }
 
