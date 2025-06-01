@@ -2,6 +2,11 @@
 
 Contains a reference implementation for the compiler project.
 
+## Team Contribution
+Lucas Faria - 33%  
+Gonçalo Magalhães - 33%  
+Alexandre Lopes - 33%
+
 ## Optimizations
 
 Our compiler implements several optimization techniques to improve the generated code's efficiency. The optimizations can be enabled using the `-o` or `optimize` flag.
