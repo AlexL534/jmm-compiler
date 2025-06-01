@@ -1,7 +1,8 @@
-class A {
-    static void main(String[] args) {
-      A a;
-      ...;
-      a.f(); }
-    int f() {return 1;}
+class C {
+    static void main(args) {
+        C var;
+        ...;
+        var.foo();
+    }
+    void foo() {}
 }
