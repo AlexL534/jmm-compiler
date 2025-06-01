@@ -160,7 +160,15 @@ public class JasminTest {
 
     @Test
     public void section3_ControlFlow_Comp_With_Zero() {
-        CpUtils.runJasmin(getJasminResult("control_flow/IfCompWithZero.ollir"), "Result: 5");
+        // Test 1: 0 < 5 (true) → should print 5
+        CpUtils.runJasmin(getJasminResult("control_flow/IfCompWithZero_Positive.ollir"), "Result: 5");
+
+        // Test 2: 0 < 0 (false) → should print 10
+        CpUtils.runJasmin(getJasminResult("control_flow/IfCompWithZero_Zero.ollir"), "Result: 10");
+
+        // Test 3: 0 < -1 (false) → should print 10
+        CpUtils.runJasmin(getJasminResult("control_flow/IfCompWithZero_Negative.ollir"), "Result: 10");
+
     }
 
     /*checks if the code of a call to a function with multiple arguments (using boolean expressions in the call) is
