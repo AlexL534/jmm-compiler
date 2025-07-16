@@ -1,6 +1,9 @@
 # Compiler Project
 
-Contains a reference implementation for the compiler project.
+## Context
+This project was made for the Compilers course ate LEIC. It implements a compiler able to handle a language based on the popular Java programming language and generate valid Java Virtual Machine (JVM) instructions in the jasmin format, which are then translated into Java bytecodes by the jasmin assembler.
+
+Project Grade: 18/20
 
 ## Team Contribution
 Lucas Faria - 33%  
